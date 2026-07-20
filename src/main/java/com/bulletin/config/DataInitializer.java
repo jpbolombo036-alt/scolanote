@@ -61,6 +61,22 @@ public class DataInitializer {
                     .role(superAdmin)
                     .build());
             log.info("Rôle SUPER_ADMIN assigné à l'utilisateur admin par défaut");
+        } else {
+            User admin = userRepository.findByUsername("admin").get();
+            Role superAdmin = roleRepository.findAll().stream()
+                    .filter(r -> "SUPER_ADMIN".equalsIgnoreCase(r.getNom()))
+                    .findFirst()
+                    .orElseThrow();
+            boolean hasSuperAdmin = userRoleRepository.findAll().stream()
+                    .anyMatch(ur -> ur.getUser().getId().equals(admin.getId())
+                            && ur.getRole().getId().equals(superAdmin.getId()));
+            if (!hasSuperAdmin) {
+                userRoleRepository.save(UserRole.builder()
+                        .user(admin)
+                        .role(superAdmin)
+                        .build());
+                log.info("Rôle SUPER_ADMIN assigné à l'utilisateur admin existant");
+            }
         }
     }
 }

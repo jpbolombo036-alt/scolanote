@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/user-roles")
+@RequestMapping("/api/roles-utilisateurs")
 @RequiredArgsConstructor
 @Tag(name = "Liens user-rôle", description = "Association utilisateurs ↔ rôles")
 public class UserRoleController {

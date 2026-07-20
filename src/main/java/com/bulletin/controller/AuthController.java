@@ -179,7 +179,7 @@ public class AuthController {
         return ResponseEntity.ok("Admin déjà initialisé. Username: admin");
     }
 
-    @PostMapping("/forgot-password")
+    @PostMapping("/mot-de-passe-oublie")
     @Operation(summary = "Demande de réinitialisation", description = "Envoie un email de réinitialisation de mot de passe")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody PasswordResetRequest request) {
         userRepository.findByUsername(request.getEmail()).ifPresent(user -> {
@@ -190,7 +190,7 @@ public class AuthController {
         return ResponseEntity.ok("Si ce compte existe, un lien de réinitialisation a été envoyé");
     }
 
-    @PostMapping("/reset-password")
+    @PostMapping("/reinitialiser-mot-de-passe")
     @Operation(summary = "Réinitialiser le mot de passe", description = "Réinitialise le mot de passe avec le token reçu")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody PasswordResetConfirm confirm) {
         try {
@@ -209,7 +209,7 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/activate-user")
+    @PostMapping("/activer-utilisateur")
     @Operation(summary = "Activer un utilisateur", description = "Active un utilisateur par son username (réservé aux admins)")
     public ResponseEntity<String> activateUser(@RequestParam String username) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

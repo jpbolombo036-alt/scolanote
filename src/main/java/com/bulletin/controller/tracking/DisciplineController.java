@@ -39,16 +39,16 @@ public class DisciplineController {
         return ResponseEntity.ok(disciplineService.getAllDisciplines());
     }
 
-    @GetMapping("/student/{studentId}")
+    @GetMapping("/eleve/{eleveId}")
     @Operation(summary = "Discipline par élève", description = "Retourne les fiches de discipline d'un élève")
-    public ResponseEntity<List<DisciplineResponse>> getByStudent(@PathVariable Long studentId) {
-        return ResponseEntity.ok(disciplineService.getByStudent(studentId));
+    public ResponseEntity<List<DisciplineResponse>> getByStudent(@PathVariable Long eleveId) {
+        return ResponseEntity.ok(disciplineService.getByStudent(eleveId));
     }
 
-    @GetMapping("/term/{termId}")
+    @GetMapping("/trimestre/{trimestreId}")
     @Operation(summary = "Discipline par trimestre", description = "Retourne les fiches de discipline d'un trimestre")
-    public ResponseEntity<List<DisciplineResponse>> getByTerm(@PathVariable Long termId) {
-        return ResponseEntity.ok(disciplineService.getByTerm(termId));
+    public ResponseEntity<List<DisciplineResponse>> getByTerm(@PathVariable Long trimestreId) {
+        return ResponseEntity.ok(disciplineService.getByTerm(trimestreId));
     }
 
     @PutMapping("/{id}")

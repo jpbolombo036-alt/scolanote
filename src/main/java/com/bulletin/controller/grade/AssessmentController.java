@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/assessments")
+@RequestMapping("/api/evaluations")
 @RequiredArgsConstructor
 @Tag(name = "Évaluations", description = "Évaluations créées par les professeurs")
 public class AssessmentController {
@@ -39,16 +39,16 @@ public class AssessmentController {
         return ResponseEntity.ok(assessmentService.getAllAssessments());
     }
 
-    @GetMapping("/assignment/{assignmentId}")
+    @GetMapping("/attribution/{attributionId}")
     @Operation(summary = "Évaluations par affectation", description = "Retourne les évaluations d'une affectation")
-    public ResponseEntity<List<AssessmentResponse>> getByAssignment(@PathVariable Long assignmentId) {
-        return ResponseEntity.ok(assessmentService.getByAssignment(assignmentId));
+    public ResponseEntity<List<AssessmentResponse>> getByAssignment(@PathVariable Long attributionId) {
+        return ResponseEntity.ok(assessmentService.getByAssignment(attributionId));
     }
 
-    @GetMapping("/term/{termId}")
+    @GetMapping("/trimestre/{trimestreId}")
     @Operation(summary = "Évaluations par trimestre", description = "Retourne les évaluations d'un trimestre")
-    public ResponseEntity<List<AssessmentResponse>> getByTerm(@PathVariable Long termId) {
-        return ResponseEntity.ok(assessmentService.getByTerm(termId));
+    public ResponseEntity<List<AssessmentResponse>> getByTerm(@PathVariable Long trimestreId) {
+        return ResponseEntity.ok(assessmentService.getByTerm(trimestreId));
     }
 
     @PutMapping("/{id}")

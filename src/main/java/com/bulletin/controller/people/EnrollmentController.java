@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/enrollments")
+@RequestMapping("/api/inscriptions")
 @RequiredArgsConstructor
 @Tag(name = "Inscriptions", description = "Gestion des inscriptions des élèves par classe")
 public class EnrollmentController {
@@ -39,16 +39,16 @@ public class EnrollmentController {
         return ResponseEntity.ok(enrollmentService.getAllEnrollments());
     }
 
-    @GetMapping("/student/{studentId}")
+    @GetMapping("/eleve/{eleveId}")
     @Operation(summary = "Inscriptions par élève", description = "Retourne les inscriptions d'un élève")
-    public ResponseEntity<List<EnrollmentResponse>> getByStudent(@PathVariable Long studentId) {
-        return ResponseEntity.ok(enrollmentService.getEnrollmentsByStudent(studentId));
+    public ResponseEntity<List<EnrollmentResponse>> getByStudent(@PathVariable Long eleveId) {
+        return ResponseEntity.ok(enrollmentService.getEnrollmentsByStudent(eleveId));
     }
 
-    @GetMapping("/classroom/{classroomId}")
+    @GetMapping("/salle/{salleId}")
     @Operation(summary = "Inscriptions par classe", description = "Retourne les inscriptions d'une classe")
-    public ResponseEntity<List<EnrollmentResponse>> getByClassroom(@PathVariable Long classroomId) {
-        return ResponseEntity.ok(enrollmentService.getEnrollmentsByClassroom(classroomId));
+    public ResponseEntity<List<EnrollmentResponse>> getByClassroom(@PathVariable Long salleId) {
+        return ResponseEntity.ok(enrollmentService.getEnrollmentsByClassroom(salleId));
     }
 
     @PutMapping("/{id}")

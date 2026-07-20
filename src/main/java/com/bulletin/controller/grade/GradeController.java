@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/grades")
+@RequestMapping("/api/notes")
 @RequiredArgsConstructor
 @Tag(name = "Notes", description = "Encodage des notes des élèves")
 public class GradeController {
@@ -39,16 +39,16 @@ public class GradeController {
         return ResponseEntity.ok(gradeService.getAllGrades());
     }
 
-    @GetMapping("/assessment/{assessmentId}")
+    @GetMapping("/evaluation/{evaluationId}")
     @Operation(summary = "Notes par évaluation", description = "Retourne les notes d'une évaluation")
-    public ResponseEntity<List<GradeResponse>> getByAssessment(@PathVariable Long assessmentId) {
-        return ResponseEntity.ok(gradeService.getByAssessment(assessmentId));
+    public ResponseEntity<List<GradeResponse>> getByAssessment(@PathVariable Long evaluationId) {
+        return ResponseEntity.ok(gradeService.getByAssessment(evaluationId));
     }
 
-    @GetMapping("/student/{studentId}")
+    @GetMapping("/eleve/{eleveId}")
     @Operation(summary = "Notes par élève", description = "Retourne les notes d'un élève")
-    public ResponseEntity<List<GradeResponse>> getByStudent(@PathVariable Long studentId) {
-        return ResponseEntity.ok(gradeService.getByStudent(studentId));
+    public ResponseEntity<List<GradeResponse>> getByStudent(@PathVariable Long eleveId) {
+        return ResponseEntity.ok(gradeService.getByStudent(eleveId));
     }
 
     @PutMapping("/{id}")

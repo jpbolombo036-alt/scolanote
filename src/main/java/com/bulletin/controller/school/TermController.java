@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/terms")
+@RequestMapping("/api/trimestres")
 @RequiredArgsConstructor
 @Tag(name = "Trimestres", description = "Gestion des périodes/trimestres")
 public class TermController {
@@ -39,10 +39,10 @@ public class TermController {
         return ResponseEntity.ok(termService.getAllTerms());
     }
 
-    @GetMapping("/academic-year/{academicYearId}")
+    @GetMapping("/annee-academique/{anneeAcademiqueId}")
     @Operation(summary = "Trimestres par année", description = "Retourne les trimestres d'une année scolaire")
-    public ResponseEntity<List<TermResponse>> getByAcademicYear(@PathVariable Long academicYearId) {
-        return ResponseEntity.ok(termService.getTermsByAcademicYear(academicYearId));
+    public ResponseEntity<List<TermResponse>> getByAcademicYear(@PathVariable Long anneeAcademiqueId) {
+        return ResponseEntity.ok(termService.getTermsByAcademicYear(anneeAcademiqueId));
     }
 
     @PutMapping("/{id}")

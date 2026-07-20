@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/schools")
+@RequestMapping("/api/ecoles")
 @RequiredArgsConstructor
 @Tag(name = "Écoles", description = "Gestion des établissements scolaires")
 public class SchoolController {

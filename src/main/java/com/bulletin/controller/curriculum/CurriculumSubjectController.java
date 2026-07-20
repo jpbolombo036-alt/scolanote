@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/curriculum-subjects")
+@RequestMapping("/api/matieres-programme")
 @RequiredArgsConstructor
 @Tag(name = "Matières de programme", description = "Coefficients et matières par programme")
 public class CurriculumSubjectController {
@@ -39,10 +39,10 @@ public class CurriculumSubjectController {
         return ResponseEntity.ok(curriculumSubjectService.getAllCurriculumSubjects());
     }
 
-    @GetMapping("/curriculum/{curriculumId}")
+    @GetMapping("/programme/{programmeId}")
     @Operation(summary = "Matières par programme", description = "Retourne les matières d'un programme (avec coefficients)")
-    public ResponseEntity<List<CurriculumSubjectResponse>> getByCurriculum(@PathVariable Long curriculumId) {
-        return ResponseEntity.ok(curriculumSubjectService.getByCurriculum(curriculumId));
+    public ResponseEntity<List<CurriculumSubjectResponse>> getByCurriculum(@PathVariable Long programmeId) {
+        return ResponseEntity.ok(curriculumSubjectService.getByCurriculum(programmeId));
     }
 
     @PutMapping("/{id}")

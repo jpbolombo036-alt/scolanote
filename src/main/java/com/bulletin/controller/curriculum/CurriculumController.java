@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/curricula")
+@RequestMapping("/api/programmes")
 @RequiredArgsConstructor
 @Tag(name = "Programmes", description = "Gestion des programmes officiels")
 public class CurriculumController {
@@ -39,10 +39,10 @@ public class CurriculumController {
         return ResponseEntity.ok(curriculumService.getAllCurricula());
     }
 
-    @GetMapping("/level/{levelId}")
+    @GetMapping("/niveau/{niveauId}")
     @Operation(summary = "Programmes par niveau", description = "Retourne les programmes d'un niveau")
-    public ResponseEntity<List<CurriculumResponse>> getByLevel(@PathVariable Long levelId) {
-        return ResponseEntity.ok(curriculumService.getCurriculaByLevel(levelId));
+    public ResponseEntity<List<CurriculumResponse>> getByLevel(@PathVariable Long niveauId) {
+        return ResponseEntity.ok(curriculumService.getCurriculaByLevel(niveauId));
     }
 
     @GetMapping("/section/{sectionId}")

@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/subjects")
+@RequestMapping("/api/matieres")
 @RequiredArgsConstructor
 @Tag(name = "Matières", description = "Gestion des matières")
 public class SubjectController {

@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/classrooms")
+@RequestMapping("/api/salles")
 @RequiredArgsConstructor
 @Tag(name = "Classes", description = "Gestion des classes")
 public class ClassroomController {
@@ -39,10 +39,10 @@ public class ClassroomController {
         return ResponseEntity.ok(classroomService.getAllClassrooms());
     }
 
-    @GetMapping("/academic-year/{academicYearId}")
+    @GetMapping("/annee-academique/{anneeAcademiqueId}")
     @Operation(summary = "Classes par année", description = "Retourne les classes d'une année scolaire")
-    public ResponseEntity<List<ClassroomResponse>> getByAcademicYear(@PathVariable Long academicYearId) {
-        return ResponseEntity.ok(classroomService.getClassroomsByAcademicYear(academicYearId));
+    public ResponseEntity<List<ClassroomResponse>> getByAcademicYear(@PathVariable Long anneeAcademiqueId) {
+        return ResponseEntity.ok(classroomService.getClassroomsByAcademicYear(anneeAcademiqueId));
     }
 
     @PutMapping("/{id}")

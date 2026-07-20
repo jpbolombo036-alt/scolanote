@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/academic-years")
+@RequestMapping("/api/annees-academiques")
 @RequiredArgsConstructor
 @Tag(name = "Années scolaires", description = "Gestion des années scolaires")
 public class AcademicYearController {
@@ -39,10 +39,10 @@ public class AcademicYearController {
         return ResponseEntity.ok(academicYearService.getAllAcademicYears());
     }
 
-    @GetMapping("/school/{schoolId}")
+    @GetMapping("/ecole/{ecoleId}")
     @Operation(summary = "Années par école", description = "Retourne les années scolaires d'une école")
-    public ResponseEntity<List<AcademicYearResponse>> getBySchool(@PathVariable Long schoolId) {
-        return ResponseEntity.ok(academicYearService.getAcademicYearsBySchool(schoolId));
+    public ResponseEntity<List<AcademicYearResponse>> getBySchool(@PathVariable Long ecoleId) {
+        return ResponseEntity.ok(academicYearService.getAcademicYearsBySchool(ecoleId));
     }
 
     @PutMapping("/{id}")

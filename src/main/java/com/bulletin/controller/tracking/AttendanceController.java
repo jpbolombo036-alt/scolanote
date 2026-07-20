@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/attendances")
+@RequestMapping("/api/presences")
 @RequiredArgsConstructor
 @Tag(name = "Présences", description = "Suivi des absences et retards")
 public class AttendanceController {
@@ -39,10 +39,10 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.getAllAttendances());
     }
 
-    @GetMapping("/student/{studentId}")
+    @GetMapping("/eleve/{eleveId}")
     @Operation(summary = "Présences par élève", description = "Retourne les présences d'un élève")
-    public ResponseEntity<List<AttendanceResponse>> getByStudent(@PathVariable Long studentId) {
-        return ResponseEntity.ok(attendanceService.getByStudent(studentId));
+    public ResponseEntity<List<AttendanceResponse>> getByStudent(@PathVariable Long eleveId) {
+        return ResponseEntity.ok(attendanceService.getByStudent(eleveId));
     }
 
     @PutMapping("/{id}")

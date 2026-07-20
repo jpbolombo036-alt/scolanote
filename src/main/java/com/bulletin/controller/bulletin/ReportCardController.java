@@ -23,7 +23,7 @@ public class ReportCardController {
     private final ReportCardService reportCardService;
     private final BulletinPdfService bulletinPdfService;
 
-    @PostMapping("/generate")
+    @PostMapping("/generer")
     @Operation(summary = "Générer les bulletins", description = "Génère les bulletins calculés automatiquement pour toute une classe et un trimestre")
     public ResponseEntity<List<ReportCardResponse>> generateBulletins(@Valid @RequestBody BulletinGenerateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(reportCardService.generateBulletins(request));
@@ -35,16 +35,16 @@ public class ReportCardController {
         return ResponseEntity.ok(reportCardService.getReportCard(id));
     }
 
-    @GetMapping("/enrollment/{enrollmentId}")
+    @GetMapping("/inscription/{inscriptionId}")
     @Operation(summary = "Bulletins par inscription", description = "Retourne les bulletins d'un élève (par inscription)")
-    public ResponseEntity<List<ReportCardResponse>> getByEnrollment(@PathVariable Long enrollmentId) {
-        return ResponseEntity.ok(reportCardService.getByEnrollment(enrollmentId));
+    public ResponseEntity<List<ReportCardResponse>> getByEnrollment(@PathVariable Long inscriptionId) {
+        return ResponseEntity.ok(reportCardService.getByEnrollment(inscriptionId));
     }
 
-    @GetMapping("/term/{termId}")
+    @GetMapping("/trimestre/{trimestreId}")
     @Operation(summary = "Bulletins par trimestre", description = "Retourne tous les bulletins d'un trimestre")
-    public ResponseEntity<List<ReportCardResponse>> getByTerm(@PathVariable Long termId) {
-        return ResponseEntity.ok(reportCardService.getByTerm(termId));
+    public ResponseEntity<List<ReportCardResponse>> getByTerm(@PathVariable Long trimestreId) {
+        return ResponseEntity.ok(reportCardService.getByTerm(trimestreId));
     }
 
     @PostMapping("/{id}/pdf")

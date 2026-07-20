@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/teaching-assignments")
+@RequestMapping("/api/attributions-enseignement")
 @RequiredArgsConstructor
 @Tag(name = "Affectations", description = "Affectation des professeurs aux matières/classe")
 public class TeachingAssignmentController {
@@ -39,22 +39,22 @@ public class TeachingAssignmentController {
         return ResponseEntity.ok(teachingAssignmentService.getAllTeachingAssignments());
     }
 
-    @GetMapping("/teacher/{teacherId}")
+    @GetMapping("/enseignant/{enseignantId}")
     @Operation(summary = "Affectations par professeur", description = "Retourne les affectations d'un professeur")
-    public ResponseEntity<List<TeachingAssignmentResponse>> getByTeacher(@PathVariable Long teacherId) {
-        return ResponseEntity.ok(teachingAssignmentService.getByTeacher(teacherId));
+    public ResponseEntity<List<TeachingAssignmentResponse>> getByTeacher(@PathVariable Long enseignantId) {
+        return ResponseEntity.ok(teachingAssignmentService.getByTeacher(enseignantId));
     }
 
-    @GetMapping("/classroom/{classroomId}")
+    @GetMapping("/salle/{salleId}")
     @Operation(summary = "Affectations par classe", description = "Retourne les affectations d'une classe")
-    public ResponseEntity<List<TeachingAssignmentResponse>> getByClassroom(@PathVariable Long classroomId) {
-        return ResponseEntity.ok(teachingAssignmentService.getByClassroom(classroomId));
+    public ResponseEntity<List<TeachingAssignmentResponse>> getByClassroom(@PathVariable Long salleId) {
+        return ResponseEntity.ok(teachingAssignmentService.getByClassroom(salleId));
     }
 
-    @GetMapping("/subject/{subjectId}")
+    @GetMapping("/matiere/{matiereId}")
     @Operation(summary = "Affectations par matière", description = "Retourne les affectations d'une matière")
-    public ResponseEntity<List<TeachingAssignmentResponse>> getBySubject(@PathVariable Long subjectId) {
-        return ResponseEntity.ok(teachingAssignmentService.getBySubject(subjectId));
+    public ResponseEntity<List<TeachingAssignmentResponse>> getBySubject(@PathVariable Long matiereId) {
+        return ResponseEntity.ok(teachingAssignmentService.getBySubject(matiereId));
     }
 
     @PutMapping("/{id}")

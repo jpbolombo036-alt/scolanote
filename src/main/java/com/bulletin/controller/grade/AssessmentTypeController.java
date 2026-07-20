@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/assessment-types")
+@RequestMapping("/api/types-evaluations")
 @RequiredArgsConstructor
 @Tag(name = "Types d'évaluation", description = "Interrogation, TP, Composition, Examen...")
 public class AssessmentTypeController {

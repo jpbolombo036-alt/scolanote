@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/levels")
+@RequestMapping("/api/niveaux")
 @RequiredArgsConstructor
 @Tag(name = "Niveaux", description = "Gestion des niveaux (Maternelle, Primaire, Secondaire)")
 public class LevelController {

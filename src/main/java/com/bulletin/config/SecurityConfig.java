@@ -91,7 +91,7 @@ public class SecurityConfig {
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
                 .collect(Collectors.toList());
-        if (origins.contains("*")) {
+        if (origins.isEmpty() || origins.contains("*")) {
             configuration.addAllowedOriginPattern("*");
         } else {
             configuration.setAllowedOrigins(origins);

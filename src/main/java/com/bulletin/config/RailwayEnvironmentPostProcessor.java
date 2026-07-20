@@ -17,11 +17,6 @@ public class RailwayEnvironmentPostProcessor implements EnvironmentPostProcessor
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        if (environment.getProperty("spring.datasource.url") != null
-                || environment.getProperty("SPRING_DATASOURCE_URL") != null) {
-            return;
-        }
-
         String databaseUrl = environment.getProperty("DATABASE_URL");
         if (databaseUrl == null || databaseUrl.trim().isEmpty()) {
             return;

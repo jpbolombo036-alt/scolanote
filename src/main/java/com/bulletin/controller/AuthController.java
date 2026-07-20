@@ -1,0 +1,219 @@
+package com.bulletin.controller;
+
+import com.bulletin.dto.*;
+import com.bulletin.entity.User;
+import com.bulletin.repository.UserRepository;
+import com.bulletin.security.JwtTokenProvider;
+import com.bulletin.security.UserPrincipalService;
+import com.bulletin.service.EmailService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/auth")
+@RequiredArgsConstructor
+@Tag(name = "Authentication", description = "")
+@Slf4j
+public class AuthController {
+
+    private final AuthenticationManager authenticationManager;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
+    private final UserPrincipalService userPrincipalService;
+
+    @Value("${app.security.admin-init-key}")
+    private String adminInitKey;
+
+    @GetMapping("/status")
+    @Operation(summary = "État du service", description = "Endpoint public pour le healthcheck de Railway")
+    public ResponseEntity<String> getStatus() {
+        log.debug("Healthcheck call received");
+        return ResponseEntity.ok("UP");
+    }
+
+    @PostMapping(value = "/token", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Connexion JSON", description = "Authentifie l'utilisateur avec un JSON et retourne un token JWT")
+    public ResponseEntity<?> loginJson(@Valid @RequestBody LoginRequest requestBody) {
+        return processLogin(requestBody.getUsername(), requestBody.getPassword());
+    }
+
+    @PostMapping(value = "/token", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    @Operation(summary = "Connexion formulaire", description = "Authentifie l'utilisateur avec un formulaire URL-encoded et retourne un token JWT")
+    public ResponseEntity<?> loginForm(@Valid @ModelAttribute LoginRequest requestBody) {
+        return processLogin(requestBody.getUsername(), requestBody.getPassword());
+    }
+
+    private ResponseEntity<?> processLogin(String user, String pass) {
+        if (user == null || pass == null || user.isBlank() || pass.isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ErrorResponse.builder()
+                            .error("Nom d'utilisateur et mot de passe requis")
+                            .build());
+        }
+
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(user, pass)
+            );
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            User existingUser = userRepository.findByUsername(user)
+                    .orElse(null);
+
+            if (existingUser == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ErrorResponse.builder()
+                                .error("Utilisateur non trouvé")
+                                .build());
+            }
+
+            if (!existingUser.isEnabled()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ErrorResponse.builder()
+                                .error("Compte désactivé. Veuillez contacter l'administrateur.")
+                                .build());
+            }
+
+            String token = jwtTokenProvider.generateToken(
+                    (com.bulletin.security.UserPrincipal) userPrincipalService.loadUserById(existingUser.getId())
+            );
+
+            return ResponseEntity.ok(TokenResponse.builder()
+                    .accessToken(token)
+                    .tokenType("bearer")
+                    .build());
+
+        } catch (AuthenticationException e) {
+            log.warn("Échec d'authentification pour l'utilisateur: {}", user, e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ErrorResponse.builder()
+                            .error("Nom d'utilisateur ou mot de passe incorrect")
+                            .build());
+        } catch (Exception e) {
+            log.error("Erreur lors de l'authentification pour l'utilisateur: {}", user, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ErrorResponse.builder()
+                            .error("Erreur serveur lors de la tentative de connexion")
+                            .build());
+        }
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "Utilisateur actuel", description = "Retourne les informations de l'utilisateur actuellement connecté")
+    public ResponseEntity<CurrentUserResponse> getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
+        return ResponseEntity.ok(CurrentUserResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .enabled(user.isEnabled())
+                .build());
+    }
+
+    @PostMapping("/init-admin")
+    @Operation(summary = "Initialiser l'admin", description = "Crée l'utilisateur admin initial (à utiliser uniquement pour la première configuration)")
+    public ResponseEntity<String> initAdmin(@RequestParam(required = false) String initKey) {
+        if (initKey == null || !initKey.equals(adminInitKey)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Clé d'initialisation invalide");
+        }
+
+        if (userRepository.findByUsername("admin").isPresent()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Un admin existe déjà");
+        }
+
+        User admin = User.builder()
+                .username("admin")
+                .password(passwordEncoder.encode("admin123"))
+                .enabled(true)
+                .build();
+
+        userRepository.save(admin);
+
+        return ResponseEntity.ok("Admin initial créé avec succès. Username: admin, Password: admin123. CHANGEZ CE MOT DE PASSE IMMÉDIATEMENT !");
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Demande de réinitialisation", description = "Envoie un email de réinitialisation de mot de passe")
+    public ResponseEntity<String> forgotPassword(@Valid @RequestBody PasswordResetRequest request) {
+        userRepository.findByUsername(request.getEmail()).ifPresent(user -> {
+            String resetToken = jwtTokenProvider.generateResetToken(user.getUsername());
+            emailService.sendPasswordResetEmail(user.getUsername(), user.getUsername(), resetToken);
+        });
+
+        return ResponseEntity.ok("Si ce compte existe, un lien de réinitialisation a été envoyé");
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Réinitialiser le mot de passe", description = "Réinitialise le mot de passe avec le token reçu")
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody PasswordResetConfirm confirm) {
+        try {
+            String username = jwtTokenProvider.validateResetToken(confirm.getToken());
+
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("Token invalide ou expiré"));
+
+            user.setPassword(passwordEncoder.encode(confirm.getNewPassword()));
+            userRepository.save(user);
+
+            return ResponseEntity.ok("Mot de passe réinitialisé avec succès");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Token invalide ou expiré");
+        }
+    }
+
+    @PostMapping("/activate-user")
+    @Operation(summary = "Activer un utilisateur", description = "Active un utilisateur par son username (réservé aux admins)")
+    public ResponseEntity<String> activateUser(@RequestParam String username) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !hasAdminRole(authentication)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Accès refusé : droits administrateur requis");
+        }
+
+        User user = userRepository.findByUsername(username)
+                .orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Utilisateur non trouvé");
+        }
+
+        user.setEnabled(true);
+        userRepository.save(user);
+
+        return ResponseEntity.ok("Utilisateur " + username + " activé avec succès");
+    }
+
+    private boolean hasAdminRole(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(auth -> "ROLE_admin".equals(auth.getAuthority()) || "ROLE_ADMIN".equals(auth.getAuthority()));
+    }
+}

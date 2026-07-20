@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: bulletin-backend
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: bulletin-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_DRIVER_CLASS
+        value: org.postgresql.Driver
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: bulletin-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: bulletin-db
+          property: password
+      - key: HIBERNATE_DIALECT
+        value: org.hibernate.dialect.PostgreSQLDialect
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SERVER_PORT
+        value: 8000
+
+databases:
+  - name: bulletin-db
+    databaseName: bulletin
+    user: bulletin_user
+    plan: free

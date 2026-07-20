@@ -1,0 +1,23 @@
+package com.bulletin.dto.user;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class UserStudentResponse {
+
+    private Long id;
+    private Long userId;
+    private String username;
+    private Long studentId;
+    private String studentNom;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

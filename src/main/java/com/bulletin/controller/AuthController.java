@@ -149,30 +149,34 @@ public class AuthController {
                     .body("Clé d'initialisation invalide");
         }
 
-        if (userRepository.findByUsername("admin").isPresent()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Un admin existe déjà");
-        }
-
-        User admin = User.builder()
-                .username("admin")
-                .password(passwordEncoder.encode("admin123"))
-                .enabled(true)
-                .build();
-
-        userRepository.save(admin);
+        User admin = userRepository.findByUsername("admin")
+                .orElseGet(() -> {
+                    User newAdmin = User.builder()
+                            .username("admin")
+                            .password(passwordEncoder.encode("admin123"))
+                            .enabled(true)
+                            .build();
+                    return userRepository.save(newAdmin);
+                });
 
         Role superAdminRole = roleRepository.findAll().stream()
                 .filter(r -> "SUPER_ADMIN".equalsIgnoreCase(r.getNom()))
                 .findFirst()
                 .orElseGet(() -> roleRepository.save(Role.builder().nom("SUPER_ADMIN").build()));
 
-        userRoleRepository.save(UserRole.builder()
-                .user(admin)
-                .role(superAdminRole)
-                .build());
+        boolean alreadyAssigned = userRoleRepository.findAll().stream()
+                .anyMatch(ur -> ur.getUser().getId().equals(admin.getId())
+                        && ur.getRole().getId().equals(superAdminRole.getId()));
 
-        return ResponseEntity.ok("Admin initial créé avec succès. Username: admin, Password: admin123. CHANGEZ CE MOT DE PASSE IMMÉDIATEMENT !");
+        if (!alreadyAssigned) {
+            userRoleRepository.save(UserRole.builder()
+                    .user(admin)
+                    .role(superAdminRole)
+                    .build());
+            return ResponseEntity.ok("Admin initialisé. Username: admin, Password: admin123. CHANGEZ CE MOT DE PASSE IMMÉDIATEMENT !");
+        }
+
+        return ResponseEntity.ok("Admin déjà initialisé. Username: admin");
     }
 
     @PostMapping("/forgot-password")

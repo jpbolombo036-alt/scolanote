@@ -1,8 +1,12 @@
 package com.bulletin.controller;
 
 import com.bulletin.dto.*;
+import com.bulletin.entity.Role;
 import com.bulletin.entity.User;
+import com.bulletin.entity.UserRole;
+import com.bulletin.repository.RoleRepository;
 import com.bulletin.repository.UserRepository;
+import com.bulletin.repository.UserRoleRepository;
 import com.bulletin.security.JwtTokenProvider;
 import com.bulletin.security.UserPrincipalService;
 import com.bulletin.service.EmailService;
@@ -38,6 +42,8 @@ public class AuthController {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final UserPrincipalService userPrincipalService;
+    private final RoleRepository roleRepository;
+    private final UserRoleRepository userRoleRepository;
 
     @Value("${app.security.admin-init-key}")
     private String adminInitKey;
@@ -155,6 +161,16 @@ public class AuthController {
                 .build();
 
         userRepository.save(admin);
+
+        Role superAdminRole = roleRepository.findAll().stream()
+                .filter(r -> "SUPER_ADMIN".equalsIgnoreCase(r.getNom()))
+                .findFirst()
+                .orElseGet(() -> roleRepository.save(Role.builder().nom("SUPER_ADMIN").build()));
+
+        userRoleRepository.save(UserRole.builder()
+                .user(admin)
+                .role(superAdminRole)
+                .build());
 
         return ResponseEntity.ok("Admin initial créé avec succès. Username: admin, Password: admin123. CHANGEZ CE MOT DE PASSE IMMÉDIATEMENT !");
     }

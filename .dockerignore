@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.gitignore
+README.md
+docs
+bulletin-exemple
+test-data.ps1
+*.md
+.env
+.env.*

@@ -19,6 +19,9 @@ public class AttendanceRequest {
     private Long studentId;
 
     @NotNull
+    private Long periodId;
+
+    @NotNull
     private LocalDate date;
 
     private boolean retard;

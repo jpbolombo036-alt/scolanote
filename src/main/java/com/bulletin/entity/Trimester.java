@@ -4,15 +4,16 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
-@Table(name = "terms")
+@Table(name = "trimesters")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @org.hibernate.annotations.Where(clause = "deleted_at IS NULL")
-public class Term {
+public class Trimester {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,6 +42,9 @@ public class Term {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    @OneToMany(mappedBy = "trimester", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Period> periods;
 
     @PrePersist
     protected void onCreate() {

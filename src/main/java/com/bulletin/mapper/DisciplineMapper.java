@@ -14,15 +14,15 @@ public interface DisciplineMapper {
     @Mapping(target = "studentId", source = "student.id")
     @Mapping(target = "studentNom", source = "student.nom")
     @Mapping(target = "studentMatricule", source = "student.matricule")
-    @Mapping(target = "termId", source = "term.id")
-    @Mapping(target = "termNom", source = "term.nom")
+    @Mapping(target = "periodId", source = "period.id")
+    @Mapping(target = "periodNom", source = "period.nom")
     DisciplineResponse toResponse(Discipline discipline);
 
     @Mapping(target = "student", ignore = true)
-    @Mapping(target = "term", ignore = true)
+    @Mapping(target = "period", ignore = true)
     Discipline toEntity(DisciplineRequest request);
 
     @Mapping(target = "student", ignore = true)
-    @Mapping(target = "term", ignore = true)
+    @Mapping(target = "period", ignore = true)
     void updateEntity(DisciplineRequest request, @MappingTarget Discipline discipline);
 }

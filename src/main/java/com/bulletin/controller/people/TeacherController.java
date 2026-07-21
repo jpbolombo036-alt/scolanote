@@ -2,11 +2,14 @@ package com.bulletin.controller.people;
 
 import com.bulletin.dto.people.TeacherRequest;
 import com.bulletin.dto.people.TeacherResponse;
+import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.TeacherService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,10 +23,14 @@ import java.util.List;
 public class TeacherController {
 
     private final TeacherService teacherService;
+    private final SecurityUtils securityUtils;
 
     @PostMapping
-    @Operation(summary = "Créer un professeur", description = "Crée un nouveau professeur")
+    @Operation(summary = "Créer un professeur", description = "Crée un nouveau professeur (direction uniquement)")
     public ResponseEntity<TeacherResponse> createTeacher(@Valid @RequestBody TeacherRequest request) {
+        if (!securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : seul la direction peut créer un professeur");
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(teacherService.createTeacher(request));
     }
 
@@ -34,20 +41,32 @@ public class TeacherController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des professeurs", description = "Retourne tous les professeurs")
-    public ResponseEntity<List<TeacherResponse>> getAllTeachers() {
+    @Operation(summary = "Liste des professeurs", description = "Retourne tous les professeurs (avec pagination optionnelle)")
+    public ResponseEntity<Page<TeacherResponse>> getAllTeachers(Pageable pageable) {
+        return ResponseEntity.ok(teacherService.getAllTeachers(pageable));
+    }
+
+    @GetMapping("/all")
+    @Operation(summary = "Liste complète des professeurs")
+    public ResponseEntity<List<TeacherResponse>> getAllTeachersUnpaginated() {
         return ResponseEntity.ok(teacherService.getAllTeachers());
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier un professeur", description = "Modifie un professeur")
+    @Operation(summary = "Modifier un professeur", description = "Modifie un professeur (direction uniquement)")
     public ResponseEntity<TeacherResponse> updateTeacher(@PathVariable Long id, @Valid @RequestBody TeacherRequest request) {
+        if (!securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : seul la direction peut modifier un professeur");
+        }
         return ResponseEntity.ok(teacherService.updateTeacher(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Supprimer un professeur", description = "Supprime un professeur")
+    @Operation(summary = "Supprimer un professeur", description = "Supprime un professeur (direction uniquement)")
     public ResponseEntity<Void> deleteTeacher(@PathVariable Long id) {
+        if (!securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : seul la direction peut supprimer un professeur");
+        }
         teacherService.deleteTeacher(id);
         return ResponseEntity.noContent().build();
     }

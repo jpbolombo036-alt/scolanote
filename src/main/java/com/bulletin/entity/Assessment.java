@@ -28,15 +28,15 @@ public class Assessment {
     private AssessmentType assessmentType;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "term_id")
-    private Term term;
+    @JoinColumn(name = "period_id")
+    private Period period;
 
     @Column(length = 200)
     private String titre;
 
     private LocalDate date;
 
-    @Column(name = "note_max")
+    @Column(name = "note_max", precision = 5, scale = 2)
     private BigDecimal noteMax;
 
     private boolean publie;

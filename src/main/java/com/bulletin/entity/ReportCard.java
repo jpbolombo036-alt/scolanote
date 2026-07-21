@@ -31,10 +31,10 @@ public class ReportCard {
     private Enrollment enrollment;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "term_id")
-    private Term term;
+    @JoinColumn(name = "period_id")
+    private Period period;
 
-    @Column(precision = 8, scale = 2)
+    @Column(name = "pourcentage", precision = 5, scale = 2)
     private BigDecimal pourcentage;
 
     @Column(name = "total_points", precision = 10, scale = 2)
@@ -51,6 +51,18 @@ public class ReportCard {
     @Column(length = 50)
     private String decision;
 
+    @Column(name = "total_absences")
+    private Integer totalAbsences;
+
+    @Column(name = "total_retards")
+    private Integer totalRetards;
+
+    @Column(length = 30)
+    private String conduite;
+
+    @Column(length = 30)
+    private String application;
+
     @Column(name = "date_generation")
     private LocalDateTime dateGeneration;
 
@@ -58,6 +70,7 @@ public class ReportCard {
     private String pdfUrl;
 
     @Column(name = "statut", length = 30)
+    @Builder.Default
     private String statut = Statut.BROUILLON.name();
 
     @Column(name = "valide_par_prefet_at")

@@ -33,6 +33,7 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Builder.Default
     private boolean enabled = true;
 
     @Column(name = "created_at")

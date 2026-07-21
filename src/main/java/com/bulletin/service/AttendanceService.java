@@ -3,10 +3,12 @@ package com.bulletin.service;
 import com.bulletin.dto.tracking.AttendanceRequest;
 import com.bulletin.dto.tracking.AttendanceResponse;
 import com.bulletin.entity.Attendance;
+import com.bulletin.entity.Period;
 import com.bulletin.entity.Student;
 import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.AttendanceMapper;
 import com.bulletin.repository.AttendanceRepository;
+import com.bulletin.repository.PeriodRepository;
 import com.bulletin.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,12 +24,16 @@ public class AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
     private final StudentRepository studentRepository;
+    private final PeriodRepository periodRepository;
     private final AttendanceMapper attendanceMapper;
+    private final PeriodClosureService periodClosureService;
 
     @Transactional
     public AttendanceResponse createAttendance(AttendanceRequest request) {
+        periodClosureService.assertPeriodeOuverte(request.getPeriodId());
         Attendance attendance = attendanceMapper.toEntity(request);
         attendance.setStudent(findStudent(request.getStudentId()));
+        attendance.setPeriod(findPeriod(request.getPeriodId()));
         Attendance saved = attendanceRepository.save(attendance);
         log.info("Présence créée: {}", saved.getId());
         return attendanceMapper.toResponse(saved);
@@ -54,9 +60,11 @@ public class AttendanceService {
 
     @Transactional
     public AttendanceResponse updateAttendance(Long id, AttendanceRequest request) {
+        periodClosureService.assertPeriodeOuverte(request.getPeriodId());
         Attendance attendance = findById(id);
         attendanceMapper.updateEntity(request, attendance);
         attendance.setStudent(findStudent(request.getStudentId()));
+        attendance.setPeriod(findPeriod(request.getPeriodId()));
         Attendance saved = attendanceRepository.save(attendance);
         log.info("Présence mise à jour: {}", saved.getId());
         return attendanceMapper.toResponse(saved);
@@ -78,5 +86,10 @@ public class AttendanceService {
     private Student findStudent(Long id) {
         return studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Élève non trouvé avec l'ID: " + id));
+    }
+
+    private Period findPeriod(Long id) {
+        return periodRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Période non trouvée avec l'ID: " + id));
     }
 }

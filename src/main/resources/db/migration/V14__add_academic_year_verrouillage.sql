@@ -1,0 +1,3 @@
+ALTER TABLE academic_years ADD COLUMN IF NOT EXISTS verrouille BOOLEAN DEFAULT FALSE;
+ALTER TABLE academic_years ADD COLUMN IF NOT EXISTS date_verrouillage TIMESTAMP;
+ALTER TABLE academic_years ADD COLUMN IF NOT EXISTS verrouille_par VARCHAR(100);

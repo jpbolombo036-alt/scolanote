@@ -4,9 +4,12 @@ import com.bulletin.dto.bulletin.BulletinGenerateRequest;
 import com.bulletin.dto.bulletin.ReportCardDetailResponse;
 import com.bulletin.dto.bulletin.ReportCardResponse;
 import com.bulletin.entity.*;
+import com.bulletin.entity.Discipline;
 import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.ReportCardMapper;
 import com.bulletin.repository.*;
+import com.bulletin.repository.AttendanceRepository;
+import com.bulletin.repository.DisciplineRepository;
 import com.bulletin.repository.UserTeacherRepository;
 import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.bulletin.BulletinCalculatorService;
@@ -18,7 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -32,11 +37,17 @@ public class ReportCardService {
     private final ReportCardDetailRepository reportCardDetailRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final ClassroomRepository classroomRepository;
-    private final TermRepository termRepository;
+    private final PeriodRepository periodRepository;
     private final ReportCardMapper reportCardMapper;
     private final BulletinCalculatorService calculator;
     private final SecurityUtils securityUtils;
     private final UserTeacherRepository userTeacherRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final DisciplineRepository disciplineRepository;
+    private final TeachingAssignmentRepository teachingAssignmentRepository;
+    private final AssessmentRepository assessmentRepository;
+    private final GradeRepository gradeRepository;
+    private final PeriodClosureService periodClosureService;
 
     @Value("${app.bulletin.mention.excellent:85}")
     private BigDecimal mentionExcellent;
@@ -49,26 +60,21 @@ public class ReportCardService {
     @Value("${app.bulletin.decision.admis:50}")
     private BigDecimal decisionAdmis;
 
-    /**
-     * Génère (ou régénère) les bulletins de toute une classe pour un trimestre.
-     * Calcul automatique des moyennes, points, pourcentage, rang, mention et décision.
-     */
     @Transactional
     public List<ReportCardResponse> generateBulletins(BulletinGenerateRequest request) {
         Classroom classroom = classroomRepository.findById(request.getClassroomId())
                 .orElseThrow(() -> new ResourceNotFoundException("Classe non trouvée avec l'ID: " + request.getClassroomId()));
-        Term term = termRepository.findById(request.getTermId())
-                .orElseThrow(() -> new ResourceNotFoundException("Trimestre non trouvé avec l'ID: " + request.getTermId()));
+        Period period = periodRepository.findById(request.getPeriodId())
+                .orElseThrow(() -> new ResourceNotFoundException("Période non trouvée avec l'ID: " + request.getPeriodId()));
 
         assertCanGenerateBulletins(classroom);
 
         List<Enrollment> enrollments = enrollmentRepository.findByClassroomId(classroom.getId());
 
-        // Calcul des pourcentages par élève pour le classement
         Map<Long, BigDecimal> percentagesByEnrollment = enrollments.stream()
                 .collect(Collectors.toMap(
                         Enrollment::getId,
-                        e -> calculator.computeGlobalResult(calculator.computeSubjectResults(e, term)).getPourcentage()
+                        e -> calculator.computeGlobalResult(calculator.computeSubjectResults(e, period)).getPourcentage()
                 ));
 
         List<Long> ranking = percentagesByEnrollment.entrySet().stream()
@@ -79,16 +85,15 @@ public class ReportCardService {
         List<ReportCardResponse> responses = new java.util.ArrayList<>();
 
         for (Enrollment enrollment : enrollments) {
-            List<SubjectResult> subjectResults = calculator.computeSubjectResults(enrollment, term);
+            List<SubjectResult> subjectResults = calculator.computeSubjectResults(enrollment, period);
             BulletinCalculatorService.GlobalResult global = calculator.computeGlobalResult(subjectResults);
 
             int rang = ranking.indexOf(enrollment.getId()) + 1;
             String mention = resolveMention(global.getPourcentage());
             String decision = global.getPourcentage().compareTo(decisionAdmis) >= 0 ? "ADMIS" : "ECHEC";
 
-            // Suppression des bulletins existants pour cette inscription + trimestre
             reportCardRepository.findByEnrollmentId(enrollment.getId()).stream()
-                    .filter(rc -> rc.getTerm() != null && rc.getTerm().getId().equals(term.getId()))
+                    .filter(rc -> rc.getPeriod() != null && rc.getPeriod().getId().equals(period.getId()))
                     .forEach(rc -> {
                         reportCardDetailRepository.findByReportCardId(rc.getId())
                                 .forEach(reportCardDetailRepository::delete);
@@ -96,15 +101,67 @@ public class ReportCardService {
                         reportCardRepository.save(rc);
                     });
 
+            Map<Long, Integer> subjectRanks = new HashMap<>();
+            for (TeachingAssignment assignment : teachingAssignmentRepository.findByClassroomId(classroom.getId())) {
+                Subject subject = assignment.getSubject();
+                List<Enrollment> classEnrollments = enrollmentRepository.findByClassroomId(classroom.getId());
+                List<BigDecimal> averages = classEnrollments.stream()
+                        .map(e -> calculator.computeSubjectResults(e, period).stream()
+                                .filter(sr -> sr.getSubject().getId().equals(subject.getId()))
+                                .findFirst()
+                                .map(SubjectResult::getMoyenne)
+                                .orElse(BigDecimal.ZERO)
+                        )
+                        .sorted(Comparator.reverseOrder())
+                        .toList();
+
+                BigDecimal studentAvg = subjectResults.stream()
+                        .filter(sr -> sr.getSubject().getId().equals(subject.getId()))
+                        .findFirst()
+                        .map(SubjectResult::getMoyenne)
+                        .orElse(BigDecimal.ZERO);
+
+                subjectRanks.put(subject.getId(), averages.indexOf(studentAvg) + 1);
+            }
+
+            Map<Long, String> appreciations = new HashMap<>();
+            for (TeachingAssignment assignment : teachingAssignmentRepository.findByClassroomId(classroom.getId())) {
+                List<Assessment> assessments = assessmentRepository.findByAssignmentId(assignment.getId()).stream()
+                        .filter(a -> a.getPeriod() != null && a.getPeriod().getId().equals(period.getId()))
+                        .toList();
+
+                for (Assessment assessment : assessments) {
+                    Grade grade = gradeRepository.findByAssessmentId(assessment.getId()).stream()
+                            .filter(g -> g.getStudent() != null && g.getStudent().getId().equals(enrollment.getStudent().getId()))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (grade != null && grade.getObservation() != null) {
+                        appreciations.put(assessment.getAssignment().getSubject().getId(), grade.getObservation());
+                    }
+                }
+            }
+
+            long absences = attendanceRepository.countByStudentIdAndPeriodIdAndRetardFalseAndAbsenceTrue(
+                    enrollment.getStudent().getId(), period.getId());
+            long retards = attendanceRepository.countByStudentIdAndPeriodIdAndRetardTrueAndAbsenceFalse(
+                    enrollment.getStudent().getId(), period.getId());
+
+            Discipline discipline = disciplineRepository.findByStudentIdAndPeriodId(enrollment.getStudent().getId(), period.getId());
+
             ReportCard reportCard = ReportCard.builder()
                     .enrollment(enrollment)
-                    .term(term)
+                    .period(period)
                     .pourcentage(global.getPourcentage())
                     .totalPoints(global.getTotalPoints())
                     .maximumPoints(global.getMaximumPoints())
                     .rang(rang)
                     .mention(mention)
                     .decision(decision)
+                    .totalAbsences((int) absences)
+                    .totalRetards((int) retards)
+                    .conduite(discipline != null ? discipline.getConduite() : null)
+                    .application(discipline != null ? discipline.getApplication() : null)
                     .build();
             reportCard = reportCardRepository.save(reportCard);
 
@@ -117,6 +174,8 @@ public class ReportCardService {
                         .points(sr.getPoints())
                         .maximum(sr.getMaximum())
                         .pourcentage(sr.getPourcentage())
+                        .rangMatiere(subjectRanks.get(sr.getSubject().getId()))
+                        .observation(appreciations.get(sr.getSubject().getId()))
                         .build();
                 reportCardDetailRepository.save(detail);
             }
@@ -126,6 +185,9 @@ public class ReportCardService {
 
             responses.add(toResponse(reportCard));
         }
+
+        periodClosureService.verrouillerPeriode(period.getId());
+        periodClosureService.verrouillerAnneeSiComplete(period.getId());
 
         return responses;
     }
@@ -144,7 +206,7 @@ public class ReportCardService {
 
     @Transactional(readOnly = true)
     public List<ReportCardResponse> getByTerm(Long termId) {
-        return reportCardRepository.findByTermId(termId).stream()
+        return reportCardRepository.findByPeriodId(termId).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -172,21 +234,22 @@ public class ReportCardService {
                         .subjectCode(d.getSubject() != null ? d.getSubject().getCode() : null)
                         .coefficient(d.getCoefficient())
                         .moyenne(d.getMoyenne())
+                        .rangMatiere(d.getRangMatiere())
                         .points(d.getPoints())
                         .maximum(d.getMaximum())
                         .pourcentage(d.getPourcentage())
-                        .observation(d.getObservation())
+                        .appreciation(d.getObservation())
                         .build())
-                .sorted(Comparator.comparing(d -> d.getSubjectNom() == null ? "" : d.getSubjectNom()))
+                .sorted((a, b) -> {
+                    String nomA = a.getSubjectNom() == null ? "" : a.getSubjectNom();
+                    String nomB = b.getSubjectNom() == null ? "" : b.getSubjectNom();
+                    return nomA.compareTo(nomB);
+                })
                 .toList();
         response.setDetails(details);
         return response;
     }
 
-    /**
-     * Section 7 : la génération de bulletins est réservée à la direction
-     * (SUPER_ADMIN/ADMIN/DIRECTEUR/PREFET) ou au titulaire de la classe.
-     */
     private void assertCanGenerateBulletins(Classroom classroom) {
         if (securityUtils.isDirection()) {
             return;

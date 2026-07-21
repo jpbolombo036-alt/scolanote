@@ -34,10 +34,12 @@ public class GradeService {
     private final TeachingAssignmentRepository teachingAssignmentRepository;
     private final UserTeacherRepository userTeacherRepository;
     private final SecurityUtils securityUtils;
+    private final PeriodClosureService periodClosureService;
 
     @Transactional
     public GradeResponse createGrade(GradeRequest request) {
         Assessment assessment = findAssessment(request.getAssessmentId());
+        periodClosureService.assertPeriodeOuverte(assessment.getPeriod().getId());
         assertTeacherOwnsAssignment(assessment.getAssignment());
         Grade grade = gradeMapper.toEntity(request);
         grade.setAssessment(assessment);
@@ -78,6 +80,7 @@ public class GradeService {
         Grade grade = findById(id);
         gradeMapper.updateEntity(request, grade);
         Assessment assessment = findAssessment(request.getAssessmentId());
+        periodClosureService.assertPeriodeOuverte(assessment.getPeriod().getId());
         assertTeacherOwnsAssignment(assessment.getAssignment());
         grade.setAssessment(assessment);
         grade.setStudent(findStudent(request.getStudentId()));

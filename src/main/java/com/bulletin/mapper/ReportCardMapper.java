@@ -15,8 +15,12 @@ public interface ReportCardMapper {
     @Mapping(target = "studentMatricule", source = "enrollment.student.matricule")
     @Mapping(target = "classroomId", source = "enrollment.classroom.id")
     @Mapping(target = "classroomNom", source = "enrollment.classroom.nom")
-    @Mapping(target = "termId", source = "term.id")
-    @Mapping(target = "termNom", source = "term.nom")
+    @Mapping(target = "periodId", source = "period.id")
+    @Mapping(target = "periodNom", source = "period.nom")
     @Mapping(target = "details", ignore = true)
+    @Mapping(target = "totalAbsences", source = "totalAbsences")
+    @Mapping(target = "totalRetards", source = "totalRetards")
+    @Mapping(target = "conduite", source = "conduite")
+    @Mapping(target = "application", source = "application")
     ReportCardResponse toResponse(ReportCard reportCard);
 }

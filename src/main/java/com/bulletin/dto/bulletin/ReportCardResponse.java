@@ -5,8 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import com.bulletin.dto.bulletin.ReportCardDetailResponse;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,8 +22,8 @@ public class ReportCardResponse {
     private String studentMatricule;
     private Long classroomId;
     private String classroomNom;
-    private Long termId;
-    private String termNom;
+    private Long periodId;
+    private String periodNom;
     private BigDecimal pourcentage;
     private BigDecimal totalPoints;
     private BigDecimal maximumPoints;
@@ -35,4 +33,8 @@ public class ReportCardResponse {
     private LocalDateTime dateGeneration;
     private String pdfUrl;
     private List<ReportCardDetailResponse> details;
+    private Integer totalAbsences;
+    private Integer totalRetards;
+    private String conduite;
+    private String application;
 }

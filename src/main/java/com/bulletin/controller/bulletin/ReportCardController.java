@@ -48,9 +48,23 @@ public class ReportCardController {
     }
 
     @PostMapping("/{id}/pdf")
-    @Operation(summary = "Générer le PDF", description = "Génère le PDF du bulletin et met à jour le pdf_url")
-    public ResponseEntity<String> generatePdf(@PathVariable Long id) {
-        String pdfUrl = bulletinPdfService.generatePdf(id);
-        return ResponseEntity.ok(pdfUrl);
+    @Operation(summary = "Générer le PDF", description = "Génère le PDF du bulletin et le retourne en téléchargement")
+    public ResponseEntity<byte[]> generatePdf(@PathVariable Long id) {
+        try {
+            java.nio.file.Path pdfPath = java.nio.file.Paths.get("uploads/bulletins/bulletin-" + id + ".pdf");
+            if (!java.nio.file.Files.exists(pdfPath)) {
+                String pdfUrl = bulletinPdfService.generatePdf(id);
+                pdfPath = java.nio.file.Paths.get(pdfUrl);
+            }
+            byte[] pdfBytes = java.nio.file.Files.readAllBytes(pdfPath);
+            String filename = "bulletin-" + id + ".pdf";
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_PDF);
+            headers.setContentDisposition(org.springframework.http.ContentDisposition.attachment().filename(filename).build());
+            headers.setContentLength(pdfBytes.length);
+            return ResponseEntity.ok().headers(headers).body(pdfBytes);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 }

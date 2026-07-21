@@ -10,6 +10,8 @@ import com.bulletin.repository.AcademicYearRepository;
 import com.bulletin.repository.SchoolRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,12 @@ public class AcademicYearService {
     @Transactional(readOnly = true)
     public AcademicYearResponse getAcademicYear(Long id) {
         return academicYearMapper.toResponse(findById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AcademicYearResponse> getAllAcademicYears(Pageable pageable) {
+        return academicYearRepository.findAll(pageable)
+                .map(academicYearMapper::toResponse);
     }
 
     @Transactional(readOnly = true)

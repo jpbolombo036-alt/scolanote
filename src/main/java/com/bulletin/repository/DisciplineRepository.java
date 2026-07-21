@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface DisciplineRepository extends JpaRepository<Discipline, Long> {
     List<Discipline> findByStudentId(Long studentId);
-    List<Discipline> findByTermId(Long termId);
+    List<Discipline> findByPeriodId(Long periodId);
+    Discipline findByStudentIdAndPeriodId(Long studentId, Long periodId);
 }

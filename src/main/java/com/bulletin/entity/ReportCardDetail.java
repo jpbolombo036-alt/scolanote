@@ -39,6 +39,8 @@ public class ReportCardDetail {
     @Column(precision = 8, scale = 2)
     private BigDecimal pourcentage;
 
+    private Integer rangMatiere;
+
     @Column(length = 500)
     private String observation;
 

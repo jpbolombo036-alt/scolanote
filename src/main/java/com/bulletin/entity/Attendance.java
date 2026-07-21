@@ -22,6 +22,10 @@ public class Attendance {
     @JoinColumn(name = "student_id")
     private Student student;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "period_id")
+    private Period period;
+
     private LocalDate date;
 
     private boolean retard;

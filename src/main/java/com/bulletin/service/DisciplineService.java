@@ -3,13 +3,13 @@ package com.bulletin.service;
 import com.bulletin.dto.tracking.DisciplineRequest;
 import com.bulletin.dto.tracking.DisciplineResponse;
 import com.bulletin.entity.Discipline;
+import com.bulletin.entity.Period;
 import com.bulletin.entity.Student;
-import com.bulletin.entity.Term;
 import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.DisciplineMapper;
 import com.bulletin.repository.DisciplineRepository;
+import com.bulletin.repository.PeriodRepository;
 import com.bulletin.repository.StudentRepository;
-import com.bulletin.repository.TermRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,14 +24,16 @@ public class DisciplineService {
 
     private final DisciplineRepository disciplineRepository;
     private final StudentRepository studentRepository;
-    private final TermRepository termRepository;
+    private final PeriodRepository periodRepository;
     private final DisciplineMapper disciplineMapper;
+    private final PeriodClosureService periodClosureService;
 
     @Transactional
     public DisciplineResponse createDiscipline(DisciplineRequest request) {
+        periodClosureService.assertPeriodeOuverte(request.getPeriodId());
         Discipline discipline = disciplineMapper.toEntity(request);
         discipline.setStudent(findStudent(request.getStudentId()));
-        discipline.setTerm(findTerm(request.getTermId()));
+        discipline.setPeriod(findPeriod(request.getPeriodId()));
         Discipline saved = disciplineRepository.save(discipline);
         log.info("Discipline créée: {}", saved.getId());
         return disciplineMapper.toResponse(saved);
@@ -58,17 +60,18 @@ public class DisciplineService {
 
     @Transactional(readOnly = true)
     public List<DisciplineResponse> getByTerm(Long termId) {
-        return disciplineRepository.findByTermId(termId).stream()
+        return disciplineRepository.findByPeriodId(termId).stream()
                 .map(disciplineMapper::toResponse)
                 .toList();
     }
 
     @Transactional
     public DisciplineResponse updateDiscipline(Long id, DisciplineRequest request) {
+        periodClosureService.assertPeriodeOuverte(request.getPeriodId());
         Discipline discipline = findById(id);
         disciplineMapper.updateEntity(request, discipline);
         discipline.setStudent(findStudent(request.getStudentId()));
-        discipline.setTerm(findTerm(request.getTermId()));
+        discipline.setPeriod(findPeriod(request.getPeriodId()));
         Discipline saved = disciplineRepository.save(discipline);
         log.info("Discipline mise à jour: {}", saved.getId());
         return disciplineMapper.toResponse(saved);
@@ -92,8 +95,8 @@ public class DisciplineService {
                 .orElseThrow(() -> new ResourceNotFoundException("Élève non trouvé avec l'ID: " + id));
     }
 
-    private Term findTerm(Long id) {
-        return termRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Trimestre non trouvé avec l'ID: " + id));
+    private Period findPeriod(Long id) {
+        return periodRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Période non trouvée avec l'ID: " + id));
     }
 }

@@ -23,7 +23,7 @@ public class AssessmentRequest {
     private Long assessmentTypeId;
 
     @NotNull
-    private Long termId;
+    private Long periodId;
 
     @Size(max = 200)
     private String titre;

@@ -23,6 +23,12 @@ public class School {
     @Column(length = 50)
     private String code;
 
+    @Column(length = 100)
+    private String province;
+
+    @Column(name = "commune_territoire", length = 100)
+    private String communeTerritoire;
+
     @Column(length = 300)
     private String adresse;
 

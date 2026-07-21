@@ -8,6 +8,8 @@ import com.bulletin.mapper.StudentMapper;
 import com.bulletin.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,12 @@ public class StudentService {
     @Transactional(readOnly = true)
     public StudentResponse getStudent(Long id) {
         return studentMapper.toResponse(findById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<StudentResponse> getAllStudents(Pageable pageable) {
+        return studentRepository.findAll(pageable)
+                .map(studentMapper::toResponse);
     }
 
     @Transactional(readOnly = true)

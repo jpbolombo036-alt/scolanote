@@ -55,4 +55,24 @@ public class SecurityUtils {
     public boolean isDirection() {
         return isAdmin() || hasRole("DIRECTEUR") || hasRole("PREFET");
     }
+
+    public boolean isSuperAdmin() {
+        return hasRole("SUPER_ADMIN");
+    }
+
+    public boolean isAdminRole() {
+        return hasRole("ADMIN");
+    }
+
+    public boolean isDirecteur() {
+        return hasRole("DIRECTEUR");
+    }
+
+    public boolean isPrefet() {
+        return hasRole("PREFET");
+    }
+
+    public boolean isEnseignant() {
+        return hasRole("ENSEIGNANT");
+    }
 }

@@ -2,11 +2,14 @@ package com.bulletin.controller.school;
 
 import com.bulletin.dto.school.ClassroomRequest;
 import com.bulletin.dto.school.ClassroomResponse;
+import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.ClassroomService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,10 +23,14 @@ import java.util.List;
 public class ClassroomController {
 
     private final ClassroomService classroomService;
+    private final SecurityUtils securityUtils;
 
     @PostMapping
-    @Operation(summary = "Créer une classe", description = "Crée une nouvelle classe")
+    @Operation(summary = "Créer une classe", description = "Crée une nouvelle classe (direction uniquement)")
     public ResponseEntity<ClassroomResponse> createClassroom(@Valid @RequestBody ClassroomRequest request) {
+        if (!securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : seul la direction peut créer une classe");
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(classroomService.createClassroom(request));
     }
 
@@ -34,8 +41,14 @@ public class ClassroomController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des classes", description = "Retourne toutes les classes")
-    public ResponseEntity<List<ClassroomResponse>> getAllClassrooms() {
+    @Operation(summary = "Liste des classes", description = "Retourne toutes les classes (avec pagination optionnelle)")
+    public ResponseEntity<Page<ClassroomResponse>> getAllClassrooms(Pageable pageable) {
+        return ResponseEntity.ok(classroomService.getAllClassrooms(pageable));
+    }
+
+    @GetMapping("/all")
+    @Operation(summary = "Liste complète des classes")
+    public ResponseEntity<List<ClassroomResponse>> getAllClassroomsUnpaginated() {
         return ResponseEntity.ok(classroomService.getAllClassrooms());
     }
 
@@ -46,14 +59,20 @@ public class ClassroomController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier une classe", description = "Modifie une classe")
+    @Operation(summary = "Modifier une classe", description = "Modifie une classe (direction uniquement)")
     public ResponseEntity<ClassroomResponse> updateClassroom(@PathVariable Long id, @Valid @RequestBody ClassroomRequest request) {
+        if (!securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : seul la direction peut modifier une classe");
+        }
         return ResponseEntity.ok(classroomService.updateClassroom(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Supprimer une classe", description = "Supprime une classe")
+    @Operation(summary = "Supprimer une classe", description = "Supprime une classe (direction uniquement)")
     public ResponseEntity<Void> deleteClassroom(@PathVariable Long id) {
+        if (!securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : seul la direction peut supprimer une classe");
+        }
         classroomService.deleteClassroom(id);
         return ResponseEntity.noContent().build();
     }

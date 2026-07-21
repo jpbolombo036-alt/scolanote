@@ -33,6 +33,15 @@ public class AcademicYear {
 
     private boolean active;
 
+    @Column(name = "verrouille")
+    private boolean verrouille;
+
+    @Column(name = "date_verrouillage")
+    private LocalDateTime dateVerrouillage;
+
+    @Column(name = "verrouille_par")
+    private String verrouillePar;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

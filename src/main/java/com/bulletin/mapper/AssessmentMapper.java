@@ -13,17 +13,17 @@ public interface AssessmentMapper {
 
     @Mapping(target = "assessmentTypeId", source = "assessmentType.id")
     @Mapping(target = "assessmentTypeNom", source = "assessmentType.nom")
-    @Mapping(target = "termId", source = "term.id")
-    @Mapping(target = "termNom", source = "term.nom")
+    @Mapping(target = "periodId", source = "period.id")
+    @Mapping(target = "periodNom", source = "period.nom")
     AssessmentResponse toResponse(Assessment assessment);
 
     @Mapping(target = "assignment", ignore = true)
     @Mapping(target = "assessmentType", ignore = true)
-    @Mapping(target = "term", ignore = true)
+    @Mapping(target = "period", ignore = true)
     Assessment toEntity(AssessmentRequest request);
 
     @Mapping(target = "assignment", ignore = true)
     @Mapping(target = "assessmentType", ignore = true)
-    @Mapping(target = "term", ignore = true)
+    @Mapping(target = "period", ignore = true)
     void updateEntity(AssessmentRequest request, @MappingTarget Assessment assessment);
 }

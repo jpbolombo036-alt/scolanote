@@ -2,11 +2,14 @@ package com.bulletin.controller.school;
 
 import com.bulletin.dto.school.AcademicYearRequest;
 import com.bulletin.dto.school.AcademicYearResponse;
+import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.AcademicYearService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,10 +23,14 @@ import java.util.List;
 public class AcademicYearController {
 
     private final AcademicYearService academicYearService;
+    private final SecurityUtils securityUtils;
 
     @PostMapping
-    @Operation(summary = "Créer une année scolaire", description = "Crée une nouvelle année scolaire")
+    @Operation(summary = "Créer une année scolaire", description = "Crée une nouvelle année scolaire (direction uniquement)")
     public ResponseEntity<AcademicYearResponse> createAcademicYear(@Valid @RequestBody AcademicYearRequest request) {
+        if (!securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : seul la direction peut créer une année scolaire");
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(academicYearService.createAcademicYear(request));
     }
 
@@ -34,8 +41,14 @@ public class AcademicYearController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des années scolaires", description = "Retourne toutes les années scolaires")
-    public ResponseEntity<List<AcademicYearResponse>> getAllAcademicYears() {
+    @Operation(summary = "Liste des années scolaires", description = "Retourne toutes les années scolaires (avec pagination optionnelle)")
+    public ResponseEntity<Page<AcademicYearResponse>> getAllAcademicYears(Pageable pageable) {
+        return ResponseEntity.ok(academicYearService.getAllAcademicYears(pageable));
+    }
+
+    @GetMapping("/all")
+    @Operation(summary = "Liste complète des années scolaires")
+    public ResponseEntity<List<AcademicYearResponse>> getAllAcademicYearsUnpaginated() {
         return ResponseEntity.ok(academicYearService.getAllAcademicYears());
     }
 
@@ -46,14 +59,20 @@ public class AcademicYearController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier une année scolaire", description = "Modifie une année scolaire")
+    @Operation(summary = "Modifier une année scolaire", description = "Modifie une année scolaire (direction uniquement)")
     public ResponseEntity<AcademicYearResponse> updateAcademicYear(@PathVariable Long id, @Valid @RequestBody AcademicYearRequest request) {
+        if (!securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : seul la direction peut modifier une année scolaire");
+        }
         return ResponseEntity.ok(academicYearService.updateAcademicYear(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Supprimer une année scolaire", description = "Supprime une année scolaire")
+    @Operation(summary = "Supprimer une année scolaire", description = "Supprime une année scolaire (direction uniquement)")
     public ResponseEntity<Void> deleteAcademicYear(@PathVariable Long id) {
+        if (!securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : seul la direction peut supprimer une année scolaire");
+        }
         academicYearService.deleteAcademicYear(id);
         return ResponseEntity.noContent().build();
     }

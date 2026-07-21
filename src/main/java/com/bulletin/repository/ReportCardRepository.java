@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface ReportCardRepository extends JpaRepository<ReportCard, Long> {
     List<ReportCard> findByEnrollmentId(Long enrollmentId);
-    List<ReportCard> findByTermId(Long termId);
+    List<ReportCard> findByPeriodId(Long periodId);
 }

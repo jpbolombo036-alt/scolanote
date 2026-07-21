@@ -8,6 +8,8 @@ import com.bulletin.mapper.SubjectMapper;
 import com.bulletin.repository.SubjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,12 @@ public class SubjectService {
     @Transactional(readOnly = true)
     public SubjectResponse getSubject(Long id) {
         return subjectMapper.toResponse(findById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SubjectResponse> getAllSubjects(Pageable pageable) {
+        return subjectRepository.findAll(pageable)
+                .map(subjectMapper::toResponse);
     }
 
     @Transactional(readOnly = true)

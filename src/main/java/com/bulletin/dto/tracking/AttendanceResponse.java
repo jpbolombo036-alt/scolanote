@@ -18,6 +18,7 @@ public class AttendanceResponse {
     private Long studentId;
     private String studentNom;
     private String studentMatricule;
+    private Long periodId;
     private LocalDate date;
     private boolean retard;
     private boolean absence;

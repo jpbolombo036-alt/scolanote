@@ -16,5 +16,5 @@ public class BulletinGenerateRequest {
     private Long classroomId;
 
     @NotNull
-    private Long termId;
+    private Long periodId;
 }

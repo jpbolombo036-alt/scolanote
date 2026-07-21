@@ -22,8 +22,8 @@ public class Discipline {
     private Student student;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "term_id")
-    private Term term;
+    @JoinColumn(name = "period_id")
+    private Period period;
 
     @Column(length = 30)
     private String conduite;

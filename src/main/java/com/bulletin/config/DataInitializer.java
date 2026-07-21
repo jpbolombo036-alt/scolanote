@@ -1,9 +1,12 @@
 package com.bulletin.config;
 
 import com.bulletin.entity.Role;
+import com.bulletin.entity.Trimester;
 import com.bulletin.entity.User;
 import com.bulletin.entity.UserRole;
+import com.bulletin.repository.AcademicYearRepository;
 import com.bulletin.repository.RoleRepository;
+import com.bulletin.repository.TrimesterRepository;
 import com.bulletin.repository.UserRepository;
 import com.bulletin.repository.UserRoleRepository;
 import com.bulletin.security.JwtTokenProvider;
@@ -14,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Component
@@ -33,6 +37,8 @@ public class DataInitializer {
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AcademicYearRepository academicYearRepository;
+    private final TrimesterRepository trimesterRepository;
 
     @PostConstruct
     public void init() {
@@ -78,5 +84,31 @@ public class DataInitializer {
                 log.info("Rôle SUPER_ADMIN assigné à l'utilisateur admin existant");
             }
         }
+
+        initPeriodes();
+    }
+
+    private void initPeriodes() {
+        academicYearRepository.findAll().forEach(year -> {
+            if (trimesterRepository.findByAcademicYearId(year.getId()).isEmpty()) {
+                String[][] trimestresData = {
+                        {"1er Trimestre", "1", "2025-09-01", "2025-12-15"},
+                        {"2e Trimestre", "2", "2026-01-05", "2026-04-15"},
+                        {"3e Trimestre", "3", "2026-04-16", "2026-09-15"}
+                };
+
+                for (String[] t : trimestresData) {
+                    Trimester trimester = Trimester.builder()
+                            .academicYear(year)
+                            .nom(t[0])
+                            .ordre(Integer.parseInt(t[1]))
+                            .dateDebut(LocalDate.parse(t[2]))
+                            .dateFin(LocalDate.parse(t[3]))
+                            .build();
+                    trimesterRepository.save(trimester);
+                    log.info("Trimestre créé: {}", t[0]);
+                }
+            }
+        });
     }
 }

@@ -14,11 +14,14 @@ public interface AttendanceMapper {
     @Mapping(target = "studentId", source = "student.id")
     @Mapping(target = "studentNom", source = "student.nom")
     @Mapping(target = "studentMatricule", source = "student.matricule")
+    @Mapping(target = "periodId", source = "period.id")
     AttendanceResponse toResponse(Attendance attendance);
 
     @Mapping(target = "student", ignore = true)
+    @Mapping(target = "period", ignore = true)
     Attendance toEntity(AttendanceRequest request);
 
     @Mapping(target = "student", ignore = true)
+    @Mapping(target = "period", ignore = true)
     void updateEntity(AttendanceRequest request, @MappingTarget Attendance attendance);
 }

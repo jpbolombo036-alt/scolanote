@@ -19,8 +19,8 @@ public class AssessmentResponse {
     private Long assignmentId;
     private Long assessmentTypeId;
     private String assessmentTypeNom;
-    private Long termId;
-    private String termNom;
+    private Long periodId;
+    private String periodNom;
     private String titre;
     private LocalDate date;
     private BigDecimal noteMax;

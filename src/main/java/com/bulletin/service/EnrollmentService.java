@@ -12,6 +12,8 @@ import com.bulletin.repository.EnrollmentRepository;
 import com.bulletin.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +42,12 @@ public class EnrollmentService {
     @Transactional(readOnly = true)
     public EnrollmentResponse getEnrollment(Long id) {
         return enrollmentMapper.toResponse(findById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EnrollmentResponse> getAllEnrollments(Pageable pageable) {
+        return enrollmentRepository.findAll(pageable)
+                .map(enrollmentMapper::toResponse);
     }
 
     @Transactional(readOnly = true)

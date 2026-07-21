@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -21,6 +22,7 @@ public class BulletinCalculatorService {
     private final AssessmentRepository assessmentRepository;
     private final GradeRepository gradeRepository;
     private final AssessmentTypeRepository assessmentTypeRepository;
+    private final EnrollmentRepository enrollmentRepository;
 
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
 
@@ -29,7 +31,7 @@ public class BulletinCalculatorService {
      * La moyenne de chaque matière est pondérée par le coefficient de l'évaluation
      * (ou par défaut par le coefficient du type d'évaluation).
      */
-    public List<SubjectResult> computeSubjectResults(Enrollment enrollment, Term term) {
+    public List<SubjectResult> computeSubjectResults(Enrollment enrollment, Period period) {
         Classroom classroom = enrollment.getClassroom();
         Student student = enrollment.getStudent();
 
@@ -47,7 +49,7 @@ public class BulletinCalculatorService {
             // Évaluations de cette matière pour ce trimestre
             List<Assessment> assessments = assessmentRepository
                     .findByAssignmentId(assignment.getId()).stream()
-                    .filter(a -> a.getTerm() != null && a.getTerm().getId().equals(term.getId()))
+                    .filter(a -> a.getPeriod() != null && a.getPeriod().getId().equals(period.getId()))
                     .toList();
 
             BigDecimal weightedSum = BigDecimal.ZERO;
@@ -136,5 +138,28 @@ public class BulletinCalculatorService {
             return BigDecimal.valueOf(assessment.getAssessmentType().getCoefficient());
         }
         return BigDecimal.ONE;
+    }
+
+    public Integer computeSubjectRank(Enrollment enrollment, Subject subject, Period period) {
+        Classroom classroom = enrollment.getClassroom();
+        List<Enrollment> allEnrollments = enrollmentRepository.findByClassroomId(classroom.getId());
+
+        List<BigDecimal> allAverages = allEnrollments.stream()
+                .map(e -> computeSubjectResults(e, period).stream()
+                        .filter(sr -> sr.getSubject().getId().equals(subject.getId()))
+                        .findFirst()
+                        .map(SubjectResult::getMoyenne)
+                        .orElse(BigDecimal.ZERO)
+                )
+                .sorted(Comparator.reverseOrder())
+                .toList();
+
+        BigDecimal studentAverage = computeSubjectResults(enrollment, period).stream()
+                .filter(sr -> sr.getSubject().getId().equals(subject.getId()))
+                .findFirst()
+                .map(SubjectResult::getMoyenne)
+                .orElse(BigDecimal.ZERO);
+
+        return allAverages.indexOf(studentAverage) + 1;
     }
 }

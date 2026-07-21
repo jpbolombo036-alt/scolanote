@@ -17,8 +17,8 @@ public class DisciplineResponse {
     private Long studentId;
     private String studentNom;
     private String studentMatricule;
-    private Long termId;
-    private String termNom;
+    private Long periodId;
+    private String periodNom;
     private String conduite;
     private String application;
     private String observation;

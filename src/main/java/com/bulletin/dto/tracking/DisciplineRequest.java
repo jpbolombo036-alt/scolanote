@@ -17,7 +17,7 @@ public class DisciplineRequest {
     private Long studentId;
 
     @NotNull
-    private Long termId;
+    private Long periodId;
 
     @Size(max = 30)
     private String conduite;

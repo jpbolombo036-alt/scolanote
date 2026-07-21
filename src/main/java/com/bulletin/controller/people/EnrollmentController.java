@@ -2,11 +2,14 @@ package com.bulletin.controller.people;
 
 import com.bulletin.dto.people.EnrollmentRequest;
 import com.bulletin.dto.people.EnrollmentResponse;
+import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.EnrollmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,10 +23,14 @@ import java.util.List;
 public class EnrollmentController {
 
     private final EnrollmentService enrollmentService;
+    private final SecurityUtils securityUtils;
 
     @PostMapping
-    @Operation(summary = "Créer une inscription", description = "Inscrit un élève dans une classe")
+    @Operation(summary = "Créer une inscription", description = "Inscrit un élève dans une classe (direction uniquement)")
     public ResponseEntity<EnrollmentResponse> createEnrollment(@Valid @RequestBody EnrollmentRequest request) {
+        if (!securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : seul la direction peut créer une inscription");
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(enrollmentService.createEnrollment(request));
     }
 
@@ -34,8 +41,14 @@ public class EnrollmentController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des inscriptions", description = "Retourne toutes les inscriptions")
-    public ResponseEntity<List<EnrollmentResponse>> getAllEnrollments() {
+    @Operation(summary = "Liste des inscriptions", description = "Retourne toutes les inscriptions (avec pagination optionnelle)")
+    public ResponseEntity<Page<EnrollmentResponse>> getAllEnrollments(Pageable pageable) {
+        return ResponseEntity.ok(enrollmentService.getAllEnrollments(pageable));
+    }
+
+    @GetMapping("/all")
+    @Operation(summary = "Liste complète des inscriptions")
+    public ResponseEntity<List<EnrollmentResponse>> getAllEnrollmentsUnpaginated() {
         return ResponseEntity.ok(enrollmentService.getAllEnrollments());
     }
 
@@ -52,14 +65,20 @@ public class EnrollmentController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier une inscription", description = "Modifie une inscription")
+    @Operation(summary = "Modifier une inscription", description = "Modifie une inscription (direction uniquement)")
     public ResponseEntity<EnrollmentResponse> updateEnrollment(@PathVariable Long id, @Valid @RequestBody EnrollmentRequest request) {
+        if (!securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : seul la direction peut modifier une inscription");
+        }
         return ResponseEntity.ok(enrollmentService.updateEnrollment(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Supprimer une inscription", description = "Supprime une inscription")
+    @Operation(summary = "Supprimer une inscription", description = "Supprime une inscription (direction uniquement)")
     public ResponseEntity<Void> deleteEnrollment(@PathVariable Long id) {
+        if (!securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : seul la direction peut supprimer une inscription");
+        }
         enrollmentService.deleteEnrollment(id);
         return ResponseEntity.noContent().build();
     }

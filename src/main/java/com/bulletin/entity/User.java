@@ -5,24 +5,35 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"username"}),
+    @UniqueConstraint(columnNames = {"email"}),
+    @UniqueConstraint(columnNames = {"telephone"})
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@org.hibernate.annotations.Where(clause = "deleted_at IS NULL")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false, length = 100)
+    @Column(length = 50, unique = true)
     private String username;
 
-    @Column(name = "password", nullable = false, length = 255)
+    @Column(length = 150, unique = true)
+    private String email;
+
+    @Column(length = 20, unique = true)
+    private String telephone;
+
+    @Column(nullable = false)
     private String password;
 
-    private boolean enabled;
+    private boolean enabled = true;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -30,12 +41,12 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        if (!enabled) {
-            enabled = true;
-        }
         updatedAt = LocalDateTime.now();
     }
 

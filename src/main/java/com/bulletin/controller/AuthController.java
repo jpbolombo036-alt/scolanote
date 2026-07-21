@@ -1,6 +1,8 @@
 package com.bulletin.controller;
 
 import com.bulletin.dto.*;
+import com.bulletin.dto.auth.RegisterAgentRequest;
+import com.bulletin.dto.auth.RegisterAgentResponse;
 import com.bulletin.entity.Role;
 import com.bulletin.entity.User;
 import com.bulletin.entity.UserRole;
@@ -55,6 +57,83 @@ public class AuthController {
         return ResponseEntity.ok("UP");
     }
 
+    @PostMapping("/register-agent")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
+    @Operation(summary = "Créer un utilisateur (agent)", description = "Crée un utilisateur avec un rôle spécifique")
+    public ResponseEntity<RegisterAgentResponse> registerAgent(@Valid @RequestBody RegisterAgentRequest request) {
+        if (request.getUsername() == null && request.getEmail() == null && request.getTelephone() == null) {
+            return ResponseEntity.badRequest()
+                    .body(RegisterAgentResponse.builder()
+                            .message("Au moins un identifiant (username, email ou telephone) est requis")
+                            .build());
+        }
+
+        if (request.getRole() == null || request.getRole().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(RegisterAgentResponse.builder()
+                            .message("Le rôle est requis")
+                            .build());
+        }
+
+        Role role = roleRepository.findAll().stream()
+                .filter(r -> r.getNom().equalsIgnoreCase(request.getRole()))
+                .findFirst()
+                .orElseGet(() -> roleRepository.save(Role.builder().nom(request.getRole().toUpperCase()).build()));
+
+        String username = request.getUsername();
+        String email = request.getEmail();
+        String telephone = request.getTelephone();
+
+        if (username != null && userRepository.findByUsername(username).isPresent()) {
+            return ResponseEntity.badRequest()
+                    .body(RegisterAgentResponse.builder()
+                            .message("Ce username existe déjà")
+                            .build());
+        }
+        if (email != null && userRepository.findByEmail(email).isPresent()) {
+            return ResponseEntity.badRequest()
+                    .body(RegisterAgentResponse.builder()
+                            .message("Cet email existe déjà")
+                            .build());
+        }
+        if (telephone != null && userRepository.findByTelephone(telephone).isPresent()) {
+            return ResponseEntity.badRequest()
+                    .body(RegisterAgentResponse.builder()
+                            .message("Ce téléphone existe déjà")
+                            .build());
+        }
+
+        String password = request.getPassword();
+        if (password == null || password.isBlank()) {
+            password = "123456";
+        }
+
+        User user = User.builder()
+                .username(username)
+                .email(email)
+                .telephone(telephone)
+                .password(passwordEncoder.encode(password))
+                .enabled(true)
+                .build();
+
+        user = userRepository.save(user);
+
+        userRoleRepository.save(UserRole.builder()
+                .user(user)
+                .role(role)
+                .build());
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(RegisterAgentResponse.builder()
+                        .id(user.getId())
+                        .username(user.getUsername())
+                        .email(user.getEmail())
+                        .telephone(user.getTelephone())
+                        .role(role.getNom())
+                        .message("Utilisateur créé avec succès. Mot de passe: " + password)
+                        .build());
+    }
+
     @PostMapping(value = "/token", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Connexion JSON", description = "Authentifie l'utilisateur avec un JSON et retourne un token JWT")
     public ResponseEntity<?> loginJson(@Valid @RequestBody LoginRequest requestBody) {
@@ -82,7 +161,7 @@ public class AuthController {
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            User existingUser = userRepository.findByUsername(user)
+            User existingUser = userRepository.findByUsernameOrEmailOrTelephone(user, user, user)
                     .orElse(null);
 
             if (existingUser == null) {

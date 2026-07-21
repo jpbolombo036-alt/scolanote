@@ -19,8 +19,9 @@ public class ReportCardDetailResponse {
     private String subjectCode;
     private Integer coefficient;
     private BigDecimal moyenne;
+    private Integer rangMatiere;
     private BigDecimal points;
     private BigDecimal maximum;
     private BigDecimal pourcentage;
-    private String observation;
+    private String appreciation;
 }

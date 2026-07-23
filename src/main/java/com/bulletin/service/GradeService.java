@@ -57,21 +57,39 @@ public class GradeService {
     @Transactional(readOnly = true)
     public List<GradeResponse> getAllGrades() {
         return gradeRepository.findAll().stream()
-                .map(gradeMapper::toResponse)
+                .map(grade -> {
+                    if (grade.getStudent() == null || grade.getAssessment() == null) {
+                        return null;
+                    }
+                    return gradeMapper.toResponse(grade);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<GradeResponse> getByAssessment(Long assessmentId) {
         return gradeRepository.findByAssessmentId(assessmentId).stream()
-                .map(gradeMapper::toResponse)
+                .map(grade -> {
+                    if (grade.getStudent() == null || grade.getAssessment() == null) {
+                        return null;
+                    }
+                    return gradeMapper.toResponse(grade);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<GradeResponse> getByStudent(Long studentId) {
         return gradeRepository.findByStudentId(studentId).stream()
-                .map(gradeMapper::toResponse)
+                .map(grade -> {
+                    if (grade.getStudent() == null || grade.getAssessment() == null) {
+                        return null;
+                    }
+                    return gradeMapper.toResponse(grade);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 

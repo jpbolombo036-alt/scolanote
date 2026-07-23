@@ -42,34 +42,63 @@ public class PeriodService {
     @Transactional(readOnly = true)
     public Page<PeriodResponse> getAllPeriods(Pageable pageable) {
         return periodRepository.findAll(pageable)
-                .map(periodMapper::toResponse);
+                .map(period -> {
+                    if (period.getTrimester() == null) {
+                        return null;
+                    }
+                    return periodMapper.toResponse(period);
+                });
     }
 
     @Transactional(readOnly = true)
     public List<PeriodResponse> getAllPeriods() {
         return periodRepository.findAll().stream()
-                .map(periodMapper::toResponse)
+                .map(period -> {
+                    if (period.getTrimester() == null) {
+                        return null;
+                    }
+                    return periodMapper.toResponse(period);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<PeriodResponse> getPeriodsByTrimester(Long trimesterId) {
         return periodRepository.findByTrimesterId(trimesterId).stream()
-                .map(periodMapper::toResponse)
+                .map(period -> {
+                    if (period.getTrimester() == null) {
+                        return null;
+                    }
+                    return periodMapper.toResponse(period);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<PeriodResponse> getVerrouillees() {
         return periodRepository.findByVerrouilleTrue().stream()
-                .map(periodMapper::toResponse)
+                .map(period -> {
+                    if (period.getTrimester() == null) {
+                        return null;
+                    }
+                    return periodMapper.toResponse(period);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<PeriodResponse> getOuvertes() {
         return periodRepository.findByVerrouilleFalse().stream()
-                .map(periodMapper::toResponse)
+                .map(period -> {
+                    if (period.getTrimester() == null) {
+                        return null;
+                    }
+                    return periodMapper.toResponse(period);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 

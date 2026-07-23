@@ -40,7 +40,13 @@ public class UserRoleService {
     @Transactional(readOnly = true)
     public List<UserRoleResponse> getAllUserRoles() {
         return userRoleRepository.findAll().stream()
-                .map(userRoleMapper::toResponse)
+                .map(userRole -> {
+                    if (userRole.getUser() == null || userRole.getRole() == null) {
+                        return null;
+                    }
+                    return userRoleMapper.toResponse(userRole);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 

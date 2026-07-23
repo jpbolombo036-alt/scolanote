@@ -53,20 +53,43 @@ public class ClassroomService {
     @Transactional(readOnly = true)
     public Page<ClassroomResponse> getAllClassrooms(Pageable pageable) {
         return classroomRepository.findAll(pageable)
-                .map(classroomMapper::toResponse);
+                .map(classroom -> {
+                    if (classroom.getAcademicYear() == null || classroom.getLevel() == null
+                            || classroom.getSection() == null || classroom.getOption() == null
+                            || classroom.getReportTemplate() == null) {
+                        return null;
+                    }
+                    return classroomMapper.toResponse(classroom);
+                });
     }
 
     @Transactional(readOnly = true)
     public List<ClassroomResponse> getAllClassrooms() {
         return classroomRepository.findAll().stream()
-                .map(classroomMapper::toResponse)
+                .map(classroom -> {
+                    if (classroom.getAcademicYear() == null || classroom.getLevel() == null
+                            || classroom.getSection() == null || classroom.getOption() == null
+                            || classroom.getReportTemplate() == null) {
+                        return null;
+                    }
+                    return classroomMapper.toResponse(classroom);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<ClassroomResponse> getClassroomsByAcademicYear(Long academicYearId) {
         return classroomRepository.findByAcademicYearId(academicYearId).stream()
-                .map(classroomMapper::toResponse)
+                .map(classroom -> {
+                    if (classroom.getAcademicYear() == null || classroom.getLevel() == null
+                            || classroom.getSection() == null || classroom.getOption() == null
+                            || classroom.getReportTemplate() == null) {
+                        return null;
+                    }
+                    return classroomMapper.toResponse(classroom);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 

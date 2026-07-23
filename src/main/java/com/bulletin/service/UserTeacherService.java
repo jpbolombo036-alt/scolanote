@@ -41,7 +41,13 @@ public class UserTeacherService {
     @Transactional(readOnly = true)
     public List<UserTeacherResponse> getAllUserTeachers() {
         return userTeacherRepository.findAll().stream()
-                .map(userTeacherMapper::toResponse)
+                .map(userTeacher -> {
+                    if (userTeacher.getUser() == null || userTeacher.getTeacher() == null) {
+                        return null;
+                    }
+                    return userTeacherMapper.toResponse(userTeacher);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 

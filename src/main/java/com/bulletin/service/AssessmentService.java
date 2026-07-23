@@ -58,21 +58,39 @@ public class AssessmentService {
     @Transactional(readOnly = true)
     public List<AssessmentResponse> getAllAssessments() {
         return assessmentRepository.findAll().stream()
-                .map(assessmentMapper::toResponse)
+                .map(assessment -> {
+                    if (assessment.getAssessmentType() == null || assessment.getPeriod() == null || assessment.getAssignment() == null) {
+                        return null;
+                    }
+                    return assessmentMapper.toResponse(assessment);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<AssessmentResponse> getByAssignment(Long assignmentId) {
         return assessmentRepository.findByAssignmentId(assignmentId).stream()
-                .map(assessmentMapper::toResponse)
+                .map(assessment -> {
+                    if (assessment.getAssessmentType() == null || assessment.getPeriod() == null || assessment.getAssignment() == null) {
+                        return null;
+                    }
+                    return assessmentMapper.toResponse(assessment);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<AssessmentResponse> getByTerm(Long termId) {
         return assessmentRepository.findByPeriodId(termId).stream()
-                .map(assessmentMapper::toResponse)
+                .map(assessment -> {
+                    if (assessment.getAssessmentType() == null || assessment.getPeriod() == null || assessment.getAssignment() == null) {
+                        return null;
+                    }
+                    return assessmentMapper.toResponse(assessment);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 

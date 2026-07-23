@@ -40,7 +40,13 @@ public class UserStudentService {
     @Transactional(readOnly = true)
     public List<UserStudentResponse> getAllUserStudents() {
         return userStudentRepository.findAll().stream()
-                .map(userStudentMapper::toResponse)
+                .map(userStudent -> {
+                    if (userStudent.getUser() == null || userStudent.getStudent() == null) {
+                        return null;
+                    }
+                    return userStudentMapper.toResponse(userStudent);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 

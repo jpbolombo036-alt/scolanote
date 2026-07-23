@@ -47,14 +47,26 @@ public class AttendanceService {
     @Transactional(readOnly = true)
     public List<AttendanceResponse> getAllAttendances() {
         return attendanceRepository.findAll().stream()
-                .map(attendanceMapper::toResponse)
+                .map(attendance -> {
+                    if (attendance.getStudent() == null || attendance.getPeriod() == null) {
+                        return null;
+                    }
+                    return attendanceMapper.toResponse(attendance);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<AttendanceResponse> getByStudent(Long studentId) {
         return attendanceRepository.findByStudentId(studentId).stream()
-                .map(attendanceMapper::toResponse)
+                .map(attendance -> {
+                    if (attendance.getStudent() == null || attendance.getPeriod() == null) {
+                        return null;
+                    }
+                    return attendanceMapper.toResponse(attendance);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 

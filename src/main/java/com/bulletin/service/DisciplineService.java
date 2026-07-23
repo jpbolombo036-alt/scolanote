@@ -47,21 +47,39 @@ public class DisciplineService {
     @Transactional(readOnly = true)
     public List<DisciplineResponse> getAllDisciplines() {
         return disciplineRepository.findAll().stream()
-                .map(disciplineMapper::toResponse)
+                .map(discipline -> {
+                    if (discipline.getStudent() == null || discipline.getPeriod() == null) {
+                        return null;
+                    }
+                    return disciplineMapper.toResponse(discipline);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<DisciplineResponse> getByStudent(Long studentId) {
         return disciplineRepository.findByStudentId(studentId).stream()
-                .map(disciplineMapper::toResponse)
+                .map(discipline -> {
+                    if (discipline.getStudent() == null || discipline.getPeriod() == null) {
+                        return null;
+                    }
+                    return disciplineMapper.toResponse(discipline);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<DisciplineResponse> getByTerm(Long termId) {
         return disciplineRepository.findByPeriodId(termId).stream()
-                .map(disciplineMapper::toResponse)
+                .map(discipline -> {
+                    if (discipline.getStudent() == null || discipline.getPeriod() == null) {
+                        return null;
+                    }
+                    return disciplineMapper.toResponse(discipline);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 

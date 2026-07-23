@@ -42,20 +42,37 @@ public class TrimesterService {
     @Transactional(readOnly = true)
     public Page<TrimesterResponse> getAllTrimesters(Pageable pageable) {
         return trimesterRepository.findAll(pageable)
-                .map(trimesterMapper::toResponse);
+                .map(trimester -> {
+                    if (trimester.getAcademicYear() == null) {
+                        return null;
+                    }
+                    return trimesterMapper.toResponse(trimester);
+                });
     }
 
     @Transactional(readOnly = true)
     public List<TrimesterResponse> getAllTrimesters() {
         return trimesterRepository.findAll().stream()
-                .map(trimesterMapper::toResponse)
+                .map(trimester -> {
+                    if (trimester.getAcademicYear() == null) {
+                        return null;
+                    }
+                    return trimesterMapper.toResponse(trimester);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<TrimesterResponse> getTrimestersByAcademicYear(Long academicYearId) {
         return trimesterRepository.findByAcademicYearId(academicYearId).stream()
-                .map(trimesterMapper::toResponse)
+                .map(trimester -> {
+                    if (trimester.getAcademicYear() == null) {
+                        return null;
+                    }
+                    return trimesterMapper.toResponse(trimester);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 

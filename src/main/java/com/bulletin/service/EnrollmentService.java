@@ -47,27 +47,50 @@ public class EnrollmentService {
     @Transactional(readOnly = true)
     public Page<EnrollmentResponse> getAllEnrollments(Pageable pageable) {
         return enrollmentRepository.findAll(pageable)
-                .map(enrollmentMapper::toResponse);
+                .map(enrollment -> {
+                    if (enrollment.getStudent() == null || enrollment.getClassroom() == null) {
+                        return null;
+                    }
+                    return enrollmentMapper.toResponse(enrollment);
+                });
     }
 
     @Transactional(readOnly = true)
     public List<EnrollmentResponse> getAllEnrollments() {
         return enrollmentRepository.findAll().stream()
-                .map(enrollmentMapper::toResponse)
+                .map(enrollment -> {
+                    if (enrollment.getStudent() == null || enrollment.getClassroom() == null) {
+                        return null;
+                    }
+                    return enrollmentMapper.toResponse(enrollment);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<EnrollmentResponse> getEnrollmentsByStudent(Long studentId) {
         return enrollmentRepository.findByStudentId(studentId).stream()
-                .map(enrollmentMapper::toResponse)
+                .map(enrollment -> {
+                    if (enrollment.getStudent() == null || enrollment.getClassroom() == null) {
+                        return null;
+                    }
+                    return enrollmentMapper.toResponse(enrollment);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<EnrollmentResponse> getEnrollmentsByClassroom(Long classroomId) {
         return enrollmentRepository.findByClassroomId(classroomId).stream()
-                .map(enrollmentMapper::toResponse)
+                .map(enrollment -> {
+                    if (enrollment.getStudent() == null || enrollment.getClassroom() == null) {
+                        return null;
+                    }
+                    return enrollmentMapper.toResponse(enrollment);
+                })
+                .filter(java.util.Objects::nonNull)
                 .toList();
     }
 

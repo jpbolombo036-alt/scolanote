@@ -211,6 +211,13 @@ public class ReportCardService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<ReportCardResponse> getAllReportCards() {
+        return reportCardRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private ReportCard findById(Long id) {
         return reportCardRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bulletin non trouvé avec l'ID: " + id));

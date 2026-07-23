@@ -47,6 +47,12 @@ public class ReportCardController {
         return ResponseEntity.ok(reportCardService.getByTerm(trimestreId));
     }
 
+    @GetMapping
+    @Operation(summary = "Tous les bulletins", description = "Retourne tous les bulletins")
+    public ResponseEntity<List<ReportCardResponse>> getAllReportCards() {
+        return ResponseEntity.ok(reportCardService.getAllReportCards());
+    }
+
     @PostMapping("/{id}/pdf")
     @Operation(summary = "Générer le PDF", description = "Génère le PDF du bulletin et le retourne en téléchargement")
     public ResponseEntity<byte[]> generatePdf(@PathVariable Long id) {

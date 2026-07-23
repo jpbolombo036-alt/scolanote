@@ -112,7 +112,7 @@ public class UserService {
 
     private UserResponse toResponse(User user) {
         List<String> roles = userRoleRepository.findAll().stream()
-                .filter(ur -> ur.getUser().getId().equals(user.getId()))
+                .filter(ur -> ur.getUser() != null && ur.getUser().getId().equals(user.getId()) && ur.getRole() != null)
                 .map(ur -> ur.getRole().getNom())
                 .collect(Collectors.toList());
         return UserResponse.builder()

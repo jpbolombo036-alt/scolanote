@@ -42,7 +42,7 @@ public class UserPrincipalService implements UserDetailsService {
 
     private UserPrincipal buildPrincipal(User user) {
         List<GrantedAuthority> authorities = userRoleRepository.findAll().stream()
-                .filter(ur -> ur.getUser().getId().equals(user.getId()))
+                .filter(ur -> ur.getUser() != null && ur.getUser().getId().equals(user.getId()) && ur.getRole() != null)
                 .map(ur -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + ur.getRole().getNom()))
                 .collect(Collectors.toList());
 

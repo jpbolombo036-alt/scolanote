@@ -51,10 +51,10 @@ public class ReportCardController {
     @Operation(summary = "Générer le PDF", description = "Génère le PDF du bulletin et le retourne en téléchargement")
     public ResponseEntity<byte[]> generatePdf(@PathVariable Long id) {
         try {
-            java.nio.file.Path pdfPath = java.nio.file.Paths.get("uploads/bulletins/bulletin-" + id + ".pdf");
+            java.nio.file.Path pdfPath = bulletinPdfService.getPdfPath(id);
             if (!java.nio.file.Files.exists(pdfPath)) {
-                String pdfUrl = bulletinPdfService.generatePdf(id);
-                pdfPath = java.nio.file.Paths.get(pdfUrl);
+                bulletinPdfService.generatePdf(id);
+                pdfPath = bulletinPdfService.getPdfPath(id);
             }
             byte[] pdfBytes = java.nio.file.Files.readAllBytes(pdfPath);
             String filename = "bulletin-" + id + ".pdf";

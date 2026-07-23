@@ -92,6 +92,9 @@ public class GradeService {
     @Transactional
     public void deleteGrade(Long id) {
         Grade grade = findById(id);
+        if (grade.getAssessment() == null || grade.getAssessment().getAssignment() == null) {
+            throw new ResourceNotFoundException("Affectation non trouvée pour la note ID: " + id);
+        }
         assertTeacherOwnsAssignment(grade.getAssessment().getAssignment());
         grade.setDeletedAt(java.time.LocalDateTime.now());
         gradeRepository.save(grade);

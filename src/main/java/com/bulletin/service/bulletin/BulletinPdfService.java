@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -31,6 +32,7 @@ public class BulletinPdfService {
     @Value("${app.upload.dir:/tmp/uploads}")
     private String uploadDir;
 
+    @Transactional(readOnly = true)
     public String generatePdf(Long reportCardId) {
         ReportCard reportCard = reportCardRepository.findById(reportCardId)
                 .orElseThrow(() -> new IllegalArgumentException("Bulletin non trouvé: " + reportCardId));
@@ -79,11 +81,15 @@ public class BulletinPdfService {
             reportCardRepository.save(reportCard);
 
             log.info("PDF généré: {}", file.toAbsolutePath());
-            return relativePath;
+            return file.toAbsolutePath().toString();
         } catch (Exception e) {
             log.error("Erreur lors de la génération du PDF", e);
             throw new RuntimeException("Échec de la génération du PDF", e);
         }
+    }
+
+    public Path getPdfPath(Long reportCardId) {
+        return Path.of(uploadDir, "bulletins", "bulletin-" + reportCardId + ".pdf");
     }
 
     private void addHeader(Document document, ReportCard reportCard) throws Exception {

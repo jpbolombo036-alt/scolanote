@@ -214,10 +214,16 @@ public class AuthController {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
+        List<String> roles = userRoleRepository.findAll().stream()
+                .filter(ur -> ur.getUser() != null && ur.getUser().getId().equals(user.getId()) && ur.getRole() != null)
+                .map(ur -> ur.getRole().getNom())
+                .toList();
+
         return ResponseEntity.ok(CurrentUserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .enabled(user.isEnabled())
+                .roles(roles)
                 .build());
     }
 

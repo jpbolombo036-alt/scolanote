@@ -11,4 +11,7 @@ public interface ReportCardRepository extends JpaRepository<ReportCard, Long> {
 
     @EntityGraph(attributePaths = {"enrollment", "enrollment.student", "enrollment.classroom", "enrollment.classroom.academicYear", "enrollment.classroom.academicYear.school", "period"})
     List<ReportCard> findAll();
+
+    @EntityGraph(attributePaths = {"enrollment", "enrollment.student", "enrollment.classroom", "enrollment.classroom.academicYear", "enrollment.classroom.academicYear.school", "period"})
+    java.util.Optional<ReportCard> findById(Long id);
 }

@@ -16,4 +16,5 @@ public class CurrentUserResponse {
     private String username;
     private Boolean enabled;
     private List<String> roles;
+    private Long schoolId;
 }

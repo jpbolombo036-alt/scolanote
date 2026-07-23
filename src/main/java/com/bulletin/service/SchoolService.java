@@ -12,6 +12,7 @@ import com.bulletin.repository.RoleRepository;
 import com.bulletin.repository.SchoolRepository;
 import com.bulletin.repository.UserRepository;
 import com.bulletin.repository.UserRoleRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -34,6 +35,7 @@ public class SchoolService {
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SecurityUtils securityUtils;
 
     @Transactional
     public SchoolResponse createSchool(SchoolRequest request) {
@@ -50,16 +52,50 @@ public class SchoolService {
     }
 
     @Transactional(readOnly = true)
-    public Page<SchoolResponse> getAllSchools(Pageable pageable) {
-        return schoolRepository.findAll(pageable)
-                .map(schoolMapper::toResponse);
+    public Page<SchoolResponse> getAccessibleSchools(Pageable pageable) {
+        if (isSuperAdmin()) {
+            return schoolRepository.findAll(pageable)
+                    .map(schoolMapper::toResponse);
+        }
+
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            return Page.empty();
+        }
+
+        List<SchoolResponse> filtered = schoolRepository.findAll().stream()
+                .filter(school -> schoolId.equals(school.getId()))
+                .map(schoolMapper::toResponse)
+                .toList();
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), filtered.size());
+        List<SchoolResponse> pageContent = start > end ? List.of() : filtered.subList(start, end);
+
+        return new org.springframework.data.domain.PageImpl<>(pageContent, pageable, filtered.size());
     }
 
     @Transactional(readOnly = true)
-    public List<SchoolResponse> getAllSchools() {
+    public List<SchoolResponse> getAllAccessibleSchools() {
+        if (isSuperAdmin()) {
+            return schoolRepository.findAll().stream()
+                    .map(schoolMapper::toResponse)
+                    .toList();
+        }
+
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            return List.of();
+        }
+
         return schoolRepository.findAll().stream()
+                .filter(school -> schoolId.equals(school.getId()))
                 .map(schoolMapper::toResponse)
                 .toList();
+    }
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
     }
 
     @Transactional
@@ -96,6 +132,7 @@ public class SchoolService {
                 .email(school.getEmail())
                 .password(passwordEncoder.encode(rawPassword))
                 .enabled(true)
+                .schoolId(school.getId())
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();

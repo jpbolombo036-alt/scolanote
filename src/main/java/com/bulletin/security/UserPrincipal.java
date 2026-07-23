@@ -17,13 +17,14 @@ public class UserPrincipal implements UserDetails {
     private String username;
     private String password;
     private List<GrantedAuthority> authorities;
+    private Long schoolId;
 
-    public static UserPrincipal create(Long id, String username, String password, List<String> roleNames) {
+    public static UserPrincipal create(Long id, String username, String password, List<String> roleNames, Long schoolId) {
         List<GrantedAuthority> authorities = roleNames.stream()
                 .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
                 .collect(java.util.stream.Collectors.toList());
 
-        return new UserPrincipal(id, username, password, authorities);
+        return new UserPrincipal(id, username, password, authorities, schoolId);
     }
 
     @Override

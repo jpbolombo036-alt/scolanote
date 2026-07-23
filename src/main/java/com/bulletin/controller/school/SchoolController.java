@@ -41,15 +41,15 @@ public class SchoolController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des écoles", description = "Retourne toutes les écoles (avec pagination optionnelle)")
+    @Operation(summary = "Liste des écoles", description = "Retourne les écoles accessibles à l'utilisateur connecté")
     public ResponseEntity<Page<SchoolResponse>> getAllSchools(Pageable pageable) {
-        return ResponseEntity.ok(schoolService.getAllSchools(pageable));
+        return ResponseEntity.ok(schoolService.getAccessibleSchools(pageable));
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Liste complète des écoles", description = "Retourne toutes les écoles sans pagination")
+    @Operation(summary = "Liste complète des écoles", description = "Retourne toutes les écoles sans pagination (SUPER_ADMIN uniquement)")
     public ResponseEntity<List<SchoolResponse>> getAllSchoolsUnpaginated() {
-        return ResponseEntity.ok(schoolService.getAllSchools());
+        return ResponseEntity.ok(schoolService.getAllAccessibleSchools());
     }
 
     @PutMapping("/{id}")

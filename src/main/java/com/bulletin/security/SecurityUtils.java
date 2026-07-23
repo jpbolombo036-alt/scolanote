@@ -75,4 +75,16 @@ public class SecurityUtils {
     public boolean isEnseignant() {
         return hasRole("ENSEIGNANT");
     }
+
+    public Long getCurrentSchoolId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof UserPrincipal userPrincipal) {
+            return userPrincipal.getSchoolId();
+        }
+        return null;
+    }
 }

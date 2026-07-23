@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/utilisateurs-enseignants")
+@RequestMapping("/api/user-teachers")
 @RequiredArgsConstructor
 @Tag(name = "Liens user-professeur", description = "Association comptes ↔ professeurs")
 public class UserTeacherController {

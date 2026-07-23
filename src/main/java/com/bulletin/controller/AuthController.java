@@ -131,7 +131,7 @@ public class AuthController {
                         .email(user.getEmail())
                         .telephone(user.getTelephone())
                         .role(role.getNom())
-                        .message("Utilisateur créé avec succès. Mot de passe: " + password)
+                        .message("Utilisateur créé avec succès")
                         .build());
     }
 

@@ -1,5 +1,7 @@
 package com.bulletin.config;
 
+import com.bulletin.security.JwtAccessDeniedHandler;
+import com.bulletin.security.JwtAuthenticationEntryPoint;
 import com.bulletin.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -59,6 +61,16 @@ public class SecurityConfig {
     }
 
     @Bean
+    public JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint() {
+        return new JwtAuthenticationEntryPoint();
+    }
+
+    @Bean
+    public JwtAccessDeniedHandler jwtAccessDeniedHandler() {
+        return new JwtAccessDeniedHandler();
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         boolean localProfile = environment.acceptsProfiles(Profiles.of("local"));
 
@@ -66,6 +78,10 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint())
+                        .accessDeniedHandler(jwtAccessDeniedHandler())
+                )
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/", "/auth/**").permitAll();
                     auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll();

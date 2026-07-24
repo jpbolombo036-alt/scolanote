@@ -70,24 +70,21 @@ public class GradeService {
 
     @Transactional(readOnly = true)
     public Page<GradeResponse> getAccessibleGrades(Pageable pageable) {
-        if (isSuperAdmin()) {
-            return gradeRepository.findAll(pageable)
-                    .map(grade -> {
-                        if (grade.getStudent() == null || grade.getAssessment() == null) {
-                            return null;
-                        }
-                        return gradeMapper.toResponse(grade);
-                    })
-                    .filter(java.util.Objects::nonNull);
-        }
-        return gradeRepository.findBySchoolId(requireSchoolId(), pageable)
+        Page<Grade> page = isSuperAdmin()
+                ? gradeRepository.findAll(pageable)
+                : gradeRepository.findBySchoolId(requireSchoolId(), pageable);
+
+        List<GradeResponse> content = page.getContent().stream()
                 .map(grade -> {
                     if (grade.getStudent() == null || grade.getAssessment() == null) {
                         return null;
                     }
                     return gradeMapper.toResponse(grade);
                 })
-                .filter(java.util.Objects::nonNull);
+                .filter(java.util.Objects::nonNull)
+                .toList();
+
+        return new org.springframework.data.domain.PageImpl<>(content, pageable, page.getTotalElements());
     }
 
     @Transactional(readOnly = true)

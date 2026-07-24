@@ -17,6 +17,8 @@ import com.bulletin.repository.UserTeacherRepository;
 import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,6 +66,28 @@ public class GradeService {
     @Transactional(readOnly = true)
     public GradeResponse getGrade(Long id) {
         return gradeMapper.toResponse(findById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<GradeResponse> getAccessibleGrades(Pageable pageable) {
+        if (isSuperAdmin()) {
+            return gradeRepository.findAll(pageable)
+                    .map(grade -> {
+                        if (grade.getStudent() == null || grade.getAssessment() == null) {
+                            return null;
+                        }
+                        return gradeMapper.toResponse(grade);
+                    })
+                    .filter(java.util.Objects::nonNull);
+        }
+        return gradeRepository.findBySchoolId(requireSchoolId(), pageable)
+                .map(grade -> {
+                    if (grade.getStudent() == null || grade.getAssessment() == null) {
+                        return null;
+                    }
+                    return gradeMapper.toResponse(grade);
+                })
+                .filter(java.util.Objects::nonNull);
     }
 
     @Transactional(readOnly = true)

@@ -228,6 +228,7 @@ public class AuthController {
                 .username(user.getUsername())
                 .enabled(user.isEnabled())
                 .roles(roles)
+                .schoolId(user.getSchoolId())
                 .build());
     }
 

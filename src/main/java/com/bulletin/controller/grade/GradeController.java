@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,7 +39,13 @@ public class GradeController {
 
     @GetMapping
     @Operation(summary = "Liste des notes", description = "Retourne les notes accessibles à l'utilisateur connecté")
-    public ResponseEntity<List<GradeResponse>> getAccessibleGrades() {
+    public ResponseEntity<Page<GradeResponse>> getAccessibleGrades(Pageable pageable) {
+        return ResponseEntity.ok(gradeService.getAccessibleGrades(pageable));
+    }
+
+    @GetMapping("/unpaginated")
+    @Operation(summary = "Liste complète des notes", description = "Retourne toutes les notes sans pagination")
+    public ResponseEntity<List<GradeResponse>> getAllGradesUnpaginated() {
         return ResponseEntity.ok(gradeService.getAccessibleGrades());
     }
 

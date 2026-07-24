@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -51,7 +53,13 @@ public class ReportCardController {
 
     @GetMapping
     @Operation(summary = "Tous les bulletins", description = "Retourne les bulletins accessibles à l'utilisateur connecté")
-    public ResponseEntity<List<ReportCardResponse>> getAccessibleReportCards() {
+    public ResponseEntity<Page<ReportCardResponse>> getAccessibleReportCards(Pageable pageable) {
+        return ResponseEntity.ok(reportCardService.getAccessibleReportCards(pageable));
+    }
+
+    @GetMapping("/unpaginated")
+    @Operation(summary = "Liste complète des bulletins", description = "Retourne tous les bulletins sans pagination")
+    public ResponseEntity<List<ReportCardResponse>> getAllReportCardsUnpaginated() {
         return ResponseEntity.ok(reportCardService.getAccessibleReportCards());
     }
 

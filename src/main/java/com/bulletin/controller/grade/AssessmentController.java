@@ -2,6 +2,7 @@ package com.bulletin.controller.grade;
 
 import com.bulletin.dto.grade.AssessmentRequest;
 import com.bulletin.dto.grade.AssessmentResponse;
+import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.AssessmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +21,7 @@ import java.util.List;
 public class AssessmentController {
 
     private final AssessmentService assessmentService;
+    private final SecurityUtils securityUtils;
 
     @PostMapping
     @Operation(summary = "Créer une évaluation", description = "Crée une évaluation pour une affectation")
@@ -34,9 +36,9 @@ public class AssessmentController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des évaluations", description = "Retourne toutes les évaluations")
-    public ResponseEntity<List<AssessmentResponse>> getAllAssessments() {
-        return ResponseEntity.ok(assessmentService.getAllAssessments());
+    @Operation(summary = "Liste des évaluations", description = "Retourne les évaluations accessibles à l'utilisateur connecté")
+    public ResponseEntity<List<AssessmentResponse>> getAccessibleAssessments() {
+        return ResponseEntity.ok(assessmentService.getAccessibleAssessments());
     }
 
     @GetMapping("/attribution/{attributionId}")

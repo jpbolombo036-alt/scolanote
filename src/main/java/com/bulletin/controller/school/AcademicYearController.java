@@ -41,15 +41,15 @@ public class AcademicYearController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des années scolaires", description = "Retourne toutes les années scolaires (avec pagination optionnelle)")
-    public ResponseEntity<Page<AcademicYearResponse>> getAllAcademicYears(Pageable pageable) {
-        return ResponseEntity.ok(academicYearService.getAllAcademicYears(pageable));
+    @Operation(summary = "Liste des années scolaires", description = "Retourne les années scolaires accessibles à l'utilisateur connecté")
+    public ResponseEntity<Page<AcademicYearResponse>> getAccessibleAcademicYears(Pageable pageable) {
+        return ResponseEntity.ok(academicYearService.getAccessibleAcademicYears(pageable));
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Liste complète des années scolaires")
+    @Operation(summary = "Liste complète des années scolaires", description = "Retourne toutes les années scolaires (SUPER_ADMIN uniquement)")
     public ResponseEntity<List<AcademicYearResponse>> getAllAcademicYearsUnpaginated() {
-        return ResponseEntity.ok(academicYearService.getAllAcademicYears());
+        return ResponseEntity.ok(academicYearService.getAccessibleAcademicYears());
     }
 
     @GetMapping("/ecole/{ecoleId}")

@@ -6,6 +6,7 @@ import com.bulletin.entity.Student;
 import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.StudentMapper;
 import com.bulletin.repository.StudentRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -22,10 +23,24 @@ public class StudentService {
 
     private final StudentRepository studentRepository;
     private final StudentMapper studentMapper;
+    private final SecurityUtils securityUtils;
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
 
     @Transactional
     public StudentResponse createStudent(StudentRequest request) {
         Student student = studentMapper.toEntity(request);
+        student.setSchoolId(requireSchoolId());
         Student saved = studentRepository.save(student);
         log.info("Élève créé: {}", saved.getId());
         return studentMapper.toResponse(saved);
@@ -37,14 +52,23 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
-    public Page<StudentResponse> getAllStudents(Pageable pageable) {
-        return studentRepository.findAll(pageable)
+    public Page<StudentResponse> getAccessibleStudents(Pageable pageable) {
+        if (isSuperAdmin()) {
+            return studentRepository.findAll(pageable)
+                    .map(studentMapper::toResponse);
+        }
+        return studentRepository.findBySchoolId(requireSchoolId(), pageable)
                 .map(studentMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
-    public List<StudentResponse> getAllStudents() {
-        return studentRepository.findAll().stream()
+    public List<StudentResponse> getAccessibleStudents() {
+        if (isSuperAdmin()) {
+            return studentRepository.findAll().stream()
+                    .map(studentMapper::toResponse)
+                    .toList();
+        }
+        return studentRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(studentMapper::toResponse)
                 .toList();
     }

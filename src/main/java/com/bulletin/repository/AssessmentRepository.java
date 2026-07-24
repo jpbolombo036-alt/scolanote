@@ -7,4 +7,5 @@ import java.util.List;
 public interface AssessmentRepository extends JpaRepository<Assessment, Long> {
     List<Assessment> findByAssignmentId(Long assignmentId);
     List<Assessment> findByPeriodId(Long periodId);
+    List<Assessment> findBySchoolId(Long schoolId);
 }

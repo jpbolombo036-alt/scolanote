@@ -97,12 +97,18 @@ public class ReportCard {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
         if (dateGeneration == null) {
             dateGeneration = LocalDateTime.now();
+        }
+        if (enrollment != null && enrollment.getStudent() != null && enrollment.getStudent().getSchoolId() != null && schoolId == null) {
+            schoolId = enrollment.getStudent().getSchoolId();
         }
     }
 

@@ -212,8 +212,13 @@ public class ReportCardService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReportCardResponse> getAllReportCards() {
-        return reportCardRepository.findAll().stream()
+    public List<ReportCardResponse> getAccessibleReportCards() {
+        if (securityUtils.isSuperAdmin()) {
+            return reportCardRepository.findAll().stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
+        return reportCardRepository.findBySchoolId(securityUtils.getCurrentSchoolId()).stream()
                 .map(this::toResponse)
                 .toList();
     }

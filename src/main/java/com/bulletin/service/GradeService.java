@@ -36,6 +36,18 @@ public class GradeService {
     private final SecurityUtils securityUtils;
     private final PeriodClosureService periodClosureService;
 
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
+
     @Transactional
     public GradeResponse createGrade(GradeRequest request) {
         Assessment assessment = findAssessment(request.getAssessmentId());
@@ -55,8 +67,19 @@ public class GradeService {
     }
 
     @Transactional(readOnly = true)
-    public List<GradeResponse> getAllGrades() {
-        return gradeRepository.findAll().stream()
+    public List<GradeResponse> getAccessibleGrades() {
+        if (isSuperAdmin()) {
+            return gradeRepository.findAll().stream()
+                    .map(grade -> {
+                        if (grade.getStudent() == null || grade.getAssessment() == null) {
+                            return null;
+                        }
+                        return gradeMapper.toResponse(grade);
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+        }
+        return gradeRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(grade -> {
                     if (grade.getStudent() == null || grade.getAssessment() == null) {
                         return null;

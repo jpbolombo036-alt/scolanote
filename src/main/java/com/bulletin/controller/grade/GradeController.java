@@ -2,6 +2,7 @@ package com.bulletin.controller.grade;
 
 import com.bulletin.dto.grade.GradeRequest;
 import com.bulletin.dto.grade.GradeResponse;
+import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.GradeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +21,7 @@ import java.util.List;
 public class GradeController {
 
     private final GradeService gradeService;
+    private final SecurityUtils securityUtils;
 
     @PostMapping
     @Operation(summary = "Encoder une note", description = "Encode une note pour un élève à une évaluation")
@@ -34,9 +36,9 @@ public class GradeController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des notes", description = "Retourne toutes les notes")
-    public ResponseEntity<List<GradeResponse>> getAllGrades() {
-        return ResponseEntity.ok(gradeService.getAllGrades());
+    @Operation(summary = "Liste des notes", description = "Retourne les notes accessibles à l'utilisateur connecté")
+    public ResponseEntity<List<GradeResponse>> getAccessibleGrades() {
+        return ResponseEntity.ok(gradeService.getAccessibleGrades());
     }
 
     @GetMapping("/evaluation/{evaluationId}")

@@ -54,7 +54,8 @@ public class UserPrincipalService implements UserDetailsService {
                 user.getId(),
                 user.getUsername(),
                 user.getPassword(),
-                authorities
+                authorities,
+                user.getSchoolId()
         );
     }
 }

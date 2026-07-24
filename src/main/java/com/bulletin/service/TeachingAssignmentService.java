@@ -12,6 +12,7 @@ import com.bulletin.repository.ClassroomRepository;
 import com.bulletin.repository.SubjectRepository;
 import com.bulletin.repository.TeacherRepository;
 import com.bulletin.repository.TeachingAssignmentRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,19 @@ public class TeachingAssignmentService {
     private final ClassroomRepository classroomRepository;
     private final SubjectRepository subjectRepository;
     private final TeachingAssignmentMapper teachingAssignmentMapper;
+    private final SecurityUtils securityUtils;
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
 
     @Transactional
     public TeachingAssignmentResponse createTeachingAssignment(TeachingAssignmentRequest request) {
@@ -36,6 +50,9 @@ public class TeachingAssignmentService {
         teachingAssignment.setTeacher(findTeacher(request.getTeacherId()));
         teachingAssignment.setClassroom(findClassroom(request.getClassroomId()));
         teachingAssignment.setSubject(findSubject(request.getSubjectId()));
+        if (teachingAssignment.getTeacher() != null && teachingAssignment.getTeacher().getSchoolId() != null) {
+            teachingAssignment.setSchoolId(teachingAssignment.getTeacher().getSchoolId());
+        }
         TeachingAssignment saved = teachingAssignmentRepository.save(teachingAssignment);
         log.info("Affectation créée: {}", saved.getId());
         return teachingAssignmentMapper.toResponse(saved);
@@ -47,8 +64,13 @@ public class TeachingAssignmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<TeachingAssignmentResponse> getAllTeachingAssignments() {
-        return teachingAssignmentRepository.findAll().stream()
+    public List<TeachingAssignmentResponse> getAccessibleTeachingAssignments() {
+        if (isSuperAdmin()) {
+            return teachingAssignmentRepository.findAll().stream()
+                    .map(teachingAssignmentMapper::toResponse)
+                    .toList();
+        }
+        return teachingAssignmentRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(teachingAssignmentMapper::toResponse)
                 .toList();
     }

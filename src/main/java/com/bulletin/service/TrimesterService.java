@@ -8,6 +8,7 @@ import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.TrimesterMapper;
 import com.bulletin.repository.AcademicYearRepository;
 import com.bulletin.repository.TrimesterRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -24,6 +25,19 @@ public class TrimesterService {
     private final TrimesterRepository trimesterRepository;
     private final AcademicYearRepository academicYearRepository;
     private final TrimesterMapper trimesterMapper;
+    private final SecurityUtils securityUtils;
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
 
     @Transactional
     public TrimesterResponse createTrimester(TrimesterRequest request) {
@@ -40,8 +54,22 @@ public class TrimesterService {
     }
 
     @Transactional(readOnly = true)
-    public Page<TrimesterResponse> getAllTrimesters(Pageable pageable) {
-        return trimesterRepository.findAll(pageable)
+    public Page<TrimesterResponse> getAccessibleTrimesters(Pageable pageable) {
+        if (isSuperAdmin()) {
+            return trimesterRepository.findAll(pageable)
+                    .map(trimester -> {
+                        if (trimester.getAcademicYear() == null) {
+                            return null;
+                        }
+                        return trimesterMapper.toResponse(trimester);
+                    });
+        }
+
+        List<Long> academicYearIds = academicYearRepository.findBySchoolId(requireSchoolId()).stream()
+                .map(com.bulletin.entity.AcademicYear::getId)
+                .toList();
+
+        return trimesterRepository.findByAcademicYearIdIn(academicYearIds, pageable)
                 .map(trimester -> {
                     if (trimester.getAcademicYear() == null) {
                         return null;
@@ -51,8 +79,24 @@ public class TrimesterService {
     }
 
     @Transactional(readOnly = true)
-    public List<TrimesterResponse> getAllTrimesters() {
-        return trimesterRepository.findAll().stream()
+    public List<TrimesterResponse> getAccessibleTrimesters() {
+        if (isSuperAdmin()) {
+            return trimesterRepository.findAll().stream()
+                    .map(trimester -> {
+                        if (trimester.getAcademicYear() == null) {
+                            return null;
+                        }
+                        return trimesterMapper.toResponse(trimester);
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+        }
+
+        List<Long> academicYearIds = academicYearRepository.findBySchoolId(requireSchoolId()).stream()
+                .map(com.bulletin.entity.AcademicYear::getId)
+                .toList();
+
+        return trimesterRepository.findByAcademicYearIdIn(academicYearIds).stream()
                 .map(trimester -> {
                     if (trimester.getAcademicYear() == null) {
                         return null;

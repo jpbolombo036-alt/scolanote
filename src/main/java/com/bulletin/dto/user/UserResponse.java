@@ -20,4 +20,5 @@ public class UserResponse {
     private List<String> roles;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long schoolId;
 }

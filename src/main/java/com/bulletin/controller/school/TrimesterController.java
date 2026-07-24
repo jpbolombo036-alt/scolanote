@@ -40,15 +40,15 @@ public class TrimesterController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des trimestres", description = "Retourne tous les trimestres (avec pagination optionnelle)")
-    public ResponseEntity<Page<TrimesterResponse>> getAllTrimesters(Pageable pageable) {
-        return ResponseEntity.ok(trimesterService.getAllTrimesters(pageable));
+    @Operation(summary = "Liste des trimestres", description = "Retourne les trimestres accessibles à l'utilisateur connecté")
+    public ResponseEntity<Page<TrimesterResponse>> getAccessibleTrimesters(Pageable pageable) {
+        return ResponseEntity.ok(trimesterService.getAccessibleTrimesters(pageable));
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Liste complète des trimestres")
+    @Operation(summary = "Liste complète des trimestres", description = "Retourne tous les trimestres (SUPER_ADMIN uniquement)")
     public ResponseEntity<List<TrimesterResponse>> getAllTrimestersUnpaginated() {
-        return ResponseEntity.ok(trimesterService.getAllTrimesters());
+        return ResponseEntity.ok(trimesterService.getAccessibleTrimesters());
     }
 
     @GetMapping("/annee-academique/{anneeAcademiqueId}")

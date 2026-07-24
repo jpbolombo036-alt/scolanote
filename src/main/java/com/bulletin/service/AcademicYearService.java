@@ -8,6 +8,7 @@ import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.AcademicYearMapper;
 import com.bulletin.repository.AcademicYearRepository;
 import com.bulletin.repository.SchoolRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -25,6 +26,19 @@ public class AcademicYearService {
     private final AcademicYearRepository academicYearRepository;
     private final SchoolRepository schoolRepository;
     private final AcademicYearMapper academicYearMapper;
+    private final SecurityUtils securityUtils;
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
 
     @Transactional
     public AcademicYearResponse createAcademicYear(AcademicYearRequest request) {
@@ -41,14 +55,23 @@ public class AcademicYearService {
     }
 
     @Transactional(readOnly = true)
-    public Page<AcademicYearResponse> getAllAcademicYears(Pageable pageable) {
-        return academicYearRepository.findAll(pageable)
+    public Page<AcademicYearResponse> getAccessibleAcademicYears(Pageable pageable) {
+        if (isSuperAdmin()) {
+            return academicYearRepository.findAll(pageable)
+                    .map(academicYearMapper::toResponse);
+        }
+        return academicYearRepository.findBySchoolId(requireSchoolId(), pageable)
                 .map(academicYearMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
-    public List<AcademicYearResponse> getAllAcademicYears() {
-        return academicYearRepository.findAll().stream()
+    public List<AcademicYearResponse> getAccessibleAcademicYears() {
+        if (isSuperAdmin()) {
+            return academicYearRepository.findAll().stream()
+                    .map(academicYearMapper::toResponse)
+                    .toList();
+        }
+        return academicYearRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(academicYearMapper::toResponse)
                 .toList();
     }

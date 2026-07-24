@@ -30,10 +30,16 @@ public class UserTeacher {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (teacher != null && teacher.getSchoolId() != null && schoolId == null) {
+            schoolId = teacher.getSchoolId();
+        }
     }
 
     @PreUpdate

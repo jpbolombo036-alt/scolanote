@@ -2,6 +2,7 @@ package com.bulletin.controller.tracking;
 
 import com.bulletin.dto.tracking.DisciplineRequest;
 import com.bulletin.dto.tracking.DisciplineResponse;
+import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.DisciplineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +21,7 @@ import java.util.List;
 public class DisciplineController {
 
     private final DisciplineService disciplineService;
+    private final SecurityUtils securityUtils;
 
     @PostMapping
     @Operation(summary = "Créer une fiche de discipline", description = "Enregistre la conduite/application d'un élève pour un trimestre")
@@ -34,9 +36,9 @@ public class DisciplineController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des fiches", description = "Retourne toutes les fiches de discipline")
-    public ResponseEntity<List<DisciplineResponse>> getAllDisciplines() {
-        return ResponseEntity.ok(disciplineService.getAllDisciplines());
+    @Operation(summary = "Liste des fiches", description = "Retourne les fiches de discipline accessibles à l'utilisateur connecté")
+    public ResponseEntity<List<DisciplineResponse>> getAccessibleDisciplines() {
+        return ResponseEntity.ok(disciplineService.getAccessibleDisciplines());
     }
 
     @GetMapping("/eleve/{eleveId}")

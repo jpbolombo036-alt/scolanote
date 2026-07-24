@@ -11,6 +11,7 @@ import com.bulletin.mapper.UserTeacherMapper;
 import com.bulletin.repository.TeacherRepository;
 import com.bulletin.repository.UserRepository;
 import com.bulletin.repository.UserTeacherRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,20 +28,47 @@ public class UserTeacherService {
     private final UserRepository userRepository;
     private final TeacherRepository teacherRepository;
     private final UserTeacherMapper userTeacherMapper;
+    private final SecurityUtils securityUtils;
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
 
     @Transactional
     public UserTeacherResponse createUserTeacher(UserTeacherRequest request) {
         UserTeacher userTeacher = userTeacherMapper.toEntity(request);
         userTeacher.setUser(findUser(request.getUserId()));
         userTeacher.setTeacher(findTeacher(request.getTeacherId()));
+        if (userTeacher.getTeacher() != null && userTeacher.getTeacher().getSchoolId() != null) {
+            userTeacher.setSchoolId(userTeacher.getTeacher().getSchoolId());
+        }
         UserTeacher saved = userTeacherRepository.save(userTeacher);
         log.info("Lien user-professeur créé: {}", saved.getId());
         return userTeacherMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
-    public List<UserTeacherResponse> getAllUserTeachers() {
-        return userTeacherRepository.findAll().stream()
+    public List<UserTeacherResponse> getAccessibleUserTeachers() {
+        if (isSuperAdmin()) {
+            return userTeacherRepository.findAll().stream()
+                    .map(userTeacher -> {
+                        if (userTeacher.getUser() == null || userTeacher.getTeacher() == null) {
+                            return null;
+                        }
+                        return userTeacherMapper.toResponse(userTeacher);
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+        }
+        return userTeacherRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(userTeacher -> {
                     if (userTeacher.getUser() == null || userTeacher.getTeacher() == null) {
                         return null;

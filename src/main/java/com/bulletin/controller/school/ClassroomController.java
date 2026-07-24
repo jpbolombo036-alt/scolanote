@@ -41,15 +41,15 @@ public class ClassroomController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des classes", description = "Retourne toutes les classes (avec pagination optionnelle)")
-    public ResponseEntity<Page<ClassroomResponse>> getAllClassrooms(Pageable pageable) {
-        return ResponseEntity.ok(classroomService.getAllClassrooms(pageable));
+    @Operation(summary = "Liste des classes", description = "Retourne les classes accessibles à l'utilisateur connecté")
+    public ResponseEntity<Page<ClassroomResponse>> getAccessibleClassrooms(Pageable pageable) {
+        return ResponseEntity.ok(classroomService.getAccessibleClassrooms(pageable));
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Liste complète des classes")
+    @Operation(summary = "Liste complète des classes", description = "Retourne toutes les classes (SUPER_ADMIN uniquement)")
     public ResponseEntity<List<ClassroomResponse>> getAllClassroomsUnpaginated() {
-        return ResponseEntity.ok(classroomService.getAllClassrooms());
+        return ResponseEntity.ok(classroomService.getAccessibleClassrooms());
     }
 
     @GetMapping("/annee-academique/{anneeAcademiqueId}")

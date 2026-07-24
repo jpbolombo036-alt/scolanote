@@ -43,15 +43,15 @@ public class PeriodController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des périodes", description = "Retourne toutes les périodes (avec pagination optionnelle)")
-    public ResponseEntity<Page<PeriodResponse>> getAllPeriods(Pageable pageable) {
-        return ResponseEntity.ok(periodService.getAllPeriods(pageable));
+    @Operation(summary = "Liste des périodes", description = "Retourne les périodes accessibles à l'utilisateur connecté")
+    public ResponseEntity<Page<PeriodResponse>> getAccessiblePeriods(Pageable pageable) {
+        return ResponseEntity.ok(periodService.getAccessiblePeriods(pageable));
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Liste complète des périodes")
+    @Operation(summary = "Liste complète des périodes", description = "Retourne toutes les périodes (SUPER_ADMIN uniquement)")
     public ResponseEntity<List<PeriodResponse>> getAllPeriodsUnpaginated() {
-        return ResponseEntity.ok(periodService.getAllPeriods());
+        return ResponseEntity.ok(periodService.getAccessiblePeriods());
     }
 
     @GetMapping("/trimestre/{trimestreId}")

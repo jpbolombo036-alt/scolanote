@@ -10,6 +10,7 @@ import com.bulletin.mapper.DisciplineMapper;
 import com.bulletin.repository.DisciplineRepository;
 import com.bulletin.repository.PeriodRepository;
 import com.bulletin.repository.StudentRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,19 @@ public class DisciplineService {
     private final PeriodRepository periodRepository;
     private final DisciplineMapper disciplineMapper;
     private final PeriodClosureService periodClosureService;
+    private final SecurityUtils securityUtils;
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
 
     @Transactional
     public DisciplineResponse createDiscipline(DisciplineRequest request) {
@@ -45,8 +59,19 @@ public class DisciplineService {
     }
 
     @Transactional(readOnly = true)
-    public List<DisciplineResponse> getAllDisciplines() {
-        return disciplineRepository.findAll().stream()
+    public List<DisciplineResponse> getAccessibleDisciplines() {
+        if (isSuperAdmin()) {
+            return disciplineRepository.findAll().stream()
+                    .map(discipline -> {
+                        if (discipline.getStudent() == null || discipline.getPeriod() == null) {
+                            return null;
+                        }
+                        return disciplineMapper.toResponse(discipline);
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+        }
+        return disciplineRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(discipline -> {
                     if (discipline.getStudent() == null || discipline.getPeriod() == null) {
                         return null;

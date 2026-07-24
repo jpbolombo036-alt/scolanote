@@ -6,6 +6,7 @@ import com.bulletin.entity.*;
 import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.ClassroomMapper;
 import com.bulletin.repository.*;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -27,6 +28,19 @@ public class ClassroomService {
     private final OptionRepository optionRepository;
     private final ReportTemplateRepository reportTemplateRepository;
     private final ClassroomMapper classroomMapper;
+    private final SecurityUtils securityUtils;
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
 
     @Transactional
     public ClassroomResponse createClassroom(ClassroomRequest request) {
@@ -51,8 +65,24 @@ public class ClassroomService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ClassroomResponse> getAllClassrooms(Pageable pageable) {
-        return classroomRepository.findAll(pageable)
+    public Page<ClassroomResponse> getAccessibleClassrooms(Pageable pageable) {
+        if (isSuperAdmin()) {
+            return classroomRepository.findAll(pageable)
+                    .map(classroom -> {
+                        if (classroom.getAcademicYear() == null || classroom.getLevel() == null
+                                || classroom.getSection() == null || classroom.getOption() == null
+                                || classroom.getReportTemplate() == null) {
+                            return null;
+                        }
+                        return classroomMapper.toResponse(classroom);
+                    });
+        }
+
+        List<Long> academicYearIds = academicYearRepository.findBySchoolId(requireSchoolId()).stream()
+                .map(com.bulletin.entity.AcademicYear::getId)
+                .toList();
+
+        return classroomRepository.findByAcademicYearIdIn(academicYearIds, pageable)
                 .map(classroom -> {
                     if (classroom.getAcademicYear() == null || classroom.getLevel() == null
                             || classroom.getSection() == null || classroom.getOption() == null
@@ -64,8 +94,26 @@ public class ClassroomService {
     }
 
     @Transactional(readOnly = true)
-    public List<ClassroomResponse> getAllClassrooms() {
-        return classroomRepository.findAll().stream()
+    public List<ClassroomResponse> getAccessibleClassrooms() {
+        if (isSuperAdmin()) {
+            return classroomRepository.findAll().stream()
+                    .map(classroom -> {
+                        if (classroom.getAcademicYear() == null || classroom.getLevel() == null
+                                || classroom.getSection() == null || classroom.getOption() == null
+                                || classroom.getReportTemplate() == null) {
+                            return null;
+                        }
+                        return classroomMapper.toResponse(classroom);
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+        }
+
+        List<Long> academicYearIds = academicYearRepository.findBySchoolId(requireSchoolId()).stream()
+                .map(com.bulletin.entity.AcademicYear::getId)
+                .toList();
+
+        return classroomRepository.findByAcademicYearIdIn(academicYearIds).stream()
                 .map(classroom -> {
                     if (classroom.getAcademicYear() == null || classroom.getLevel() == null
                             || classroom.getSection() == null || classroom.getOption() == null

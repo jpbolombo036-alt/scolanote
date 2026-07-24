@@ -10,6 +10,7 @@ import com.bulletin.repository.RoleRepository;
 import com.bulletin.repository.UserRepository;
 import com.bulletin.repository.UserRoleRepository;
 import com.bulletin.security.JwtTokenProvider;
+import com.bulletin.security.SecurityUtils;
 import com.bulletin.security.UserPrincipalService;
 import com.bulletin.service.EmailService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -47,6 +48,7 @@ public class AuthController {
     private final UserPrincipalService userPrincipalService;
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
+    private final SecurityUtils securityUtils;
 
     @Value("${app.security.admin-init-key}")
     private String adminInitKey;
@@ -115,6 +117,7 @@ public class AuthController {
                 .telephone(telephone)
                 .password(passwordEncoder.encode(password))
                 .enabled(true)
+                .schoolId(securityUtils.getCurrentSchoolId())
                 .build();
 
         user = userRepository.save(user);
@@ -131,6 +134,7 @@ public class AuthController {
                         .email(user.getEmail())
                         .telephone(user.getTelephone())
                         .role(role.getNom())
+                        .schoolId(user.getSchoolId())
                         .message("Utilisateur créé avec succès")
                         .build());
     }

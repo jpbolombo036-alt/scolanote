@@ -56,8 +56,19 @@ public class AssessmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<AssessmentResponse> getAllAssessments() {
-        return assessmentRepository.findAll().stream()
+    public List<AssessmentResponse> getAccessibleAssessments() {
+        if (isSuperAdmin()) {
+            return assessmentRepository.findAll().stream()
+                    .map(assessment -> {
+                        if (assessment.getAssessmentType() == null || assessment.getPeriod() == null || assessment.getAssignment() == null) {
+                            return null;
+                        }
+                        return assessmentMapper.toResponse(assessment);
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+        }
+        return assessmentRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(assessment -> {
                     if (assessment.getAssessmentType() == null || assessment.getPeriod() == null || assessment.getAssignment() == null) {
                         return null;

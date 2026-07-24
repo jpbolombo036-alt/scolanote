@@ -10,6 +10,7 @@ import com.bulletin.mapper.EnrollmentMapper;
 import com.bulletin.repository.ClassroomRepository;
 import com.bulletin.repository.EnrollmentRepository;
 import com.bulletin.repository.StudentRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -28,6 +29,19 @@ public class EnrollmentService {
     private final StudentRepository studentRepository;
     private final ClassroomRepository classroomRepository;
     private final EnrollmentMapper enrollmentMapper;
+    private final SecurityUtils securityUtils;
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
 
     @Transactional
     public EnrollmentResponse createEnrollment(EnrollmentRequest request) {
@@ -45,8 +59,17 @@ public class EnrollmentService {
     }
 
     @Transactional(readOnly = true)
-    public Page<EnrollmentResponse> getAllEnrollments(Pageable pageable) {
-        return enrollmentRepository.findAll(pageable)
+    public Page<EnrollmentResponse> getAccessibleEnrollments(Pageable pageable) {
+        if (isSuperAdmin()) {
+            return enrollmentRepository.findAll(pageable)
+                    .map(enrollment -> {
+                        if (enrollment.getStudent() == null || enrollment.getClassroom() == null) {
+                            return null;
+                        }
+                        return enrollmentMapper.toResponse(enrollment);
+                    });
+        }
+        return enrollmentRepository.findBySchoolId(requireSchoolId(), pageable)
                 .map(enrollment -> {
                     if (enrollment.getStudent() == null || enrollment.getClassroom() == null) {
                         return null;
@@ -56,8 +79,19 @@ public class EnrollmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<EnrollmentResponse> getAllEnrollments() {
-        return enrollmentRepository.findAll().stream()
+    public List<EnrollmentResponse> getAccessibleEnrollments() {
+        if (isSuperAdmin()) {
+            return enrollmentRepository.findAll().stream()
+                    .map(enrollment -> {
+                        if (enrollment.getStudent() == null || enrollment.getClassroom() == null) {
+                            return null;
+                        }
+                        return enrollmentMapper.toResponse(enrollment);
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+        }
+        return enrollmentRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(enrollment -> {
                     if (enrollment.getStudent() == null || enrollment.getClassroom() == null) {
                         return null;

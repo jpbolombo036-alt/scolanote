@@ -34,9 +34,9 @@ public class UserController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des utilisateurs", description = "Retourne tous les utilisateurs")
+    @Operation(summary = "Liste des utilisateurs", description = "Retourne les utilisateurs accessibles à l'utilisateur connecté")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
-        return ResponseEntity.ok(userService.getAllUsers());
+        return ResponseEntity.ok(userService.getAccessibleUsers());
     }
 
     @PutMapping("/{id}")

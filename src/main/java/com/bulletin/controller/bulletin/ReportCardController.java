@@ -2,6 +2,7 @@ package com.bulletin.controller.bulletin;
 
 import com.bulletin.dto.bulletin.BulletinGenerateRequest;
 import com.bulletin.dto.bulletin.ReportCardResponse;
+import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.ReportCardService;
 import com.bulletin.service.bulletin.BulletinPdfService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,6 +23,7 @@ public class ReportCardController {
 
     private final ReportCardService reportCardService;
     private final BulletinPdfService bulletinPdfService;
+    private final SecurityUtils securityUtils;
 
     @PostMapping("/generer")
     @Operation(summary = "Générer les bulletins", description = "Génère les bulletins calculés automatiquement pour toute une classe et un trimestre")
@@ -48,9 +50,9 @@ public class ReportCardController {
     }
 
     @GetMapping
-    @Operation(summary = "Tous les bulletins", description = "Retourne tous les bulletins")
-    public ResponseEntity<List<ReportCardResponse>> getAllReportCards() {
-        return ResponseEntity.ok(reportCardService.getAllReportCards());
+    @Operation(summary = "Tous les bulletins", description = "Retourne les bulletins accessibles à l'utilisateur connecté")
+    public ResponseEntity<List<ReportCardResponse>> getAccessibleReportCards() {
+        return ResponseEntity.ok(reportCardService.getAccessibleReportCards());
     }
 
     @PostMapping("/{id}/pdf")

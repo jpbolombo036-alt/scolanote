@@ -15,5 +15,6 @@ public class RegisterAgentResponse {
     private String email;
     private String telephone;
     private String role;
+    private Long schoolId;
     private String message;
 }

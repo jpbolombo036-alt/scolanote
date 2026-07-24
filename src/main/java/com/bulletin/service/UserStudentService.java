@@ -10,6 +10,7 @@ import com.bulletin.mapper.UserStudentMapper;
 import com.bulletin.repository.StudentRepository;
 import com.bulletin.repository.UserRepository;
 import com.bulletin.repository.UserStudentRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,20 +27,47 @@ public class UserStudentService {
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
     private final UserStudentMapper userStudentMapper;
+    private final SecurityUtils securityUtils;
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
 
     @Transactional
     public UserStudentResponse createUserStudent(UserStudentRequest request) {
         UserStudent userStudent = userStudentMapper.toEntity(request);
         userStudent.setUser(findUser(request.getUserId()));
         userStudent.setStudent(findStudent(request.getStudentId()));
+        if (userStudent.getStudent() != null && userStudent.getStudent().getSchoolId() != null) {
+            userStudent.setSchoolId(userStudent.getStudent().getSchoolId());
+        }
         UserStudent saved = userStudentRepository.save(userStudent);
         log.info("Lien user-élève créé: {}", saved.getId());
         return userStudentMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
-    public List<UserStudentResponse> getAllUserStudents() {
-        return userStudentRepository.findAll().stream()
+    public List<UserStudentResponse> getAccessibleUserStudents() {
+        if (isSuperAdmin()) {
+            return userStudentRepository.findAll().stream()
+                    .map(userStudent -> {
+                        if (userStudent.getUser() == null || userStudent.getStudent() == null) {
+                            return null;
+                        }
+                        return userStudentMapper.toResponse(userStudent);
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+        }
+        return userStudentRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(userStudent -> {
                     if (userStudent.getUser() == null || userStudent.getStudent() == null) {
                         return null;

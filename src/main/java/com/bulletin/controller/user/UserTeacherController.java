@@ -2,6 +2,7 @@ package com.bulletin.controller.user;
 
 import com.bulletin.dto.user.UserTeacherRequest;
 import com.bulletin.dto.user.UserTeacherResponse;
+import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.UserTeacherService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +21,7 @@ import java.util.List;
 public class UserTeacherController {
 
     private final UserTeacherService userTeacherService;
+    private final SecurityUtils securityUtils;
 
     @PostMapping
     @Operation(summary = "Associer un professeur", description = "Associe un professeur à un compte")
@@ -28,9 +30,9 @@ public class UserTeacherController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des liens", description = "Retourne tous les liens user-professeur")
-    public ResponseEntity<List<UserTeacherResponse>> getAllUserTeachers() {
-        return ResponseEntity.ok(userTeacherService.getAllUserTeachers());
+    @Operation(summary = "Liste des liens", description = "Retourne les liens user-professeur accessibles")
+    public ResponseEntity<List<UserTeacherResponse>> getAccessibleUserTeachers() {
+        return ResponseEntity.ok(userTeacherService.getAccessibleUserTeachers());
     }
 
     @DeleteMapping("/{id}")

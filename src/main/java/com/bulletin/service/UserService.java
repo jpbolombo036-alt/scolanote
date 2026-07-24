@@ -9,6 +9,7 @@ import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.repository.RoleRepository;
 import com.bulletin.repository.UserRepository;
 import com.bulletin.repository.UserRoleRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,6 +28,7 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SecurityUtils securityUtils;
 
     @Transactional
     public UserResponse createUser(UserRequest request) {
@@ -38,6 +40,7 @@ public class UserService {
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .enabled(request.isEnabled())
+                .schoolId(securityUtils.getCurrentSchoolId())
                 .build();
         User saved = userRepository.save(user);
 
@@ -57,6 +60,25 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponse getUser(Long id) {
         return toResponse(findById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserResponse> getAccessibleUsers() {
+        if (securityUtils.isSuperAdmin()) {
+            return userRepository.findAll().stream()
+                    .map(this::toResponse)
+                    .toList();
+        }
+
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            return List.of();
+        }
+
+        return userRepository.findAll().stream()
+                .filter(user -> schoolId.equals(user.getSchoolId()))
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -122,6 +144,7 @@ public class UserService {
                 .roles(roles)
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
+                .schoolId(user.getSchoolId())
                 .build();
     }
 }

@@ -41,15 +41,15 @@ public class EnrollmentController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des inscriptions", description = "Retourne toutes les inscriptions (avec pagination optionnelle)")
-    public ResponseEntity<Page<EnrollmentResponse>> getAllEnrollments(Pageable pageable) {
-        return ResponseEntity.ok(enrollmentService.getAllEnrollments(pageable));
+    @Operation(summary = "Liste des inscriptions", description = "Retourne les inscriptions accessibles à l'utilisateur connecté")
+    public ResponseEntity<Page<EnrollmentResponse>> getAccessibleEnrollments(Pageable pageable) {
+        return ResponseEntity.ok(enrollmentService.getAccessibleEnrollments(pageable));
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Liste complète des inscriptions")
+    @Operation(summary = "Liste complète des inscriptions", description = "Retourne toutes les inscriptions (SUPER_ADMIN uniquement)")
     public ResponseEntity<List<EnrollmentResponse>> getAllEnrollmentsUnpaginated() {
-        return ResponseEntity.ok(enrollmentService.getAllEnrollments());
+        return ResponseEntity.ok(enrollmentService.getAccessibleEnrollments());
     }
 
     @GetMapping("/eleve/{eleveId}")

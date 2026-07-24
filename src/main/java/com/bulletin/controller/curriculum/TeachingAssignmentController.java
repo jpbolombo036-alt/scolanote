@@ -2,6 +2,7 @@ package com.bulletin.controller.curriculum;
 
 import com.bulletin.dto.curriculum.TeachingAssignmentRequest;
 import com.bulletin.dto.curriculum.TeachingAssignmentResponse;
+import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.TeachingAssignmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +21,7 @@ import java.util.List;
 public class TeachingAssignmentController {
 
     private final TeachingAssignmentService teachingAssignmentService;
+    private final SecurityUtils securityUtils;
 
     @PostMapping
     @Operation(summary = "Créer une affectation", description = "Affecte un professeur à une matière dans une classe")
@@ -34,9 +36,9 @@ public class TeachingAssignmentController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des affectations", description = "Retourne toutes les affectations")
-    public ResponseEntity<List<TeachingAssignmentResponse>> getAllTeachingAssignments() {
-        return ResponseEntity.ok(teachingAssignmentService.getAllTeachingAssignments());
+    @Operation(summary = "Liste des affectations", description = "Retourne les affectations accessibles à l'utilisateur connecté")
+    public ResponseEntity<List<TeachingAssignmentResponse>> getAccessibleTeachingAssignments() {
+        return ResponseEntity.ok(teachingAssignmentService.getAccessibleTeachingAssignments());
     }
 
     @GetMapping("/enseignant/{enseignantId}")

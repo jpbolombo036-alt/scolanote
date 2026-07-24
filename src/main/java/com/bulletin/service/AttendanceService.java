@@ -10,6 +10,7 @@ import com.bulletin.mapper.AttendanceMapper;
 import com.bulletin.repository.AttendanceRepository;
 import com.bulletin.repository.PeriodRepository;
 import com.bulletin.repository.StudentRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,19 @@ public class AttendanceService {
     private final PeriodRepository periodRepository;
     private final AttendanceMapper attendanceMapper;
     private final PeriodClosureService periodClosureService;
+    private final SecurityUtils securityUtils;
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
 
     @Transactional
     public AttendanceResponse createAttendance(AttendanceRequest request) {
@@ -45,8 +59,19 @@ public class AttendanceService {
     }
 
     @Transactional(readOnly = true)
-    public List<AttendanceResponse> getAllAttendances() {
-        return attendanceRepository.findAll().stream()
+    public List<AttendanceResponse> getAccessibleAttendances() {
+        if (isSuperAdmin()) {
+            return attendanceRepository.findAll().stream()
+                    .map(attendance -> {
+                        if (attendance.getStudent() == null || attendance.getPeriod() == null) {
+                            return null;
+                        }
+                        return attendanceMapper.toResponse(attendance);
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+        }
+        return attendanceRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(attendance -> {
                     if (attendance.getStudent() == null || attendance.getPeriod() == null) {
                         return null;

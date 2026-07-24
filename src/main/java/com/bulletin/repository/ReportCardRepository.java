@@ -8,6 +8,7 @@ import java.util.List;
 public interface ReportCardRepository extends JpaRepository<ReportCard, Long> {
     List<ReportCard> findByEnrollmentId(Long enrollmentId);
     List<ReportCard> findByPeriodId(Long periodId);
+    List<ReportCard> findBySchoolId(Long schoolId);
 
     @EntityGraph(attributePaths = {"enrollment", "enrollment.student", "enrollment.classroom", "enrollment.classroom.academicYear", "enrollment.classroom.academicYear.school", "period"})
     List<ReportCard> findAll();

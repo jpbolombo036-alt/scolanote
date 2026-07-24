@@ -2,6 +2,7 @@ package com.bulletin.controller.tracking;
 
 import com.bulletin.dto.tracking.AttendanceRequest;
 import com.bulletin.dto.tracking.AttendanceResponse;
+import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.AttendanceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +21,7 @@ import java.util.List;
 public class AttendanceController {
 
     private final AttendanceService attendanceService;
+    private final SecurityUtils securityUtils;
 
     @PostMapping
     @Operation(summary = "Créer une présence", description = "Enregistre une présence/absence/retard")
@@ -34,9 +36,9 @@ public class AttendanceController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des présences", description = "Retourne toutes les présences")
-    public ResponseEntity<List<AttendanceResponse>> getAllAttendances() {
-        return ResponseEntity.ok(attendanceService.getAllAttendances());
+    @Operation(summary = "Liste des présences", description = "Retourne les présences accessibles à l'utilisateur connecté")
+    public ResponseEntity<List<AttendanceResponse>> getAccessibleAttendances() {
+        return ResponseEntity.ok(attendanceService.getAccessibleAttendances());
     }
 
     @GetMapping("/eleve/{eleveId}")

@@ -41,15 +41,15 @@ public class StudentController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des élèves", description = "Retourne tous les élèves (avec pagination optionnelle)")
-    public ResponseEntity<Page<StudentResponse>> getAllStudents(Pageable pageable) {
-        return ResponseEntity.ok(studentService.getAllStudents(pageable));
+    @Operation(summary = "Liste des élèves", description = "Retourne les élèves accessibles à l'utilisateur connecté")
+    public ResponseEntity<Page<StudentResponse>> getAccessibleStudents(Pageable pageable) {
+        return ResponseEntity.ok(studentService.getAccessibleStudents(pageable));
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Liste complète des élèves")
+    @Operation(summary = "Liste complète des élèves", description = "Retourne tous les élèves (SUPER_ADMIN uniquement)")
     public ResponseEntity<List<StudentResponse>> getAllStudentsUnpaginated() {
-        return ResponseEntity.ok(studentService.getAllStudents());
+        return ResponseEntity.ok(studentService.getAccessibleStudents());
     }
 
     @PutMapping("/{id}")

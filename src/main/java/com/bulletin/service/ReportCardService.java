@@ -241,15 +241,36 @@ public class ReportCardService {
     }
 
     private String resolveMention(BigDecimal pourcentage) {
-        if (pourcentage.compareTo(mentionExcellent) >= 0) return "EXCELLENT";
-        if (pourcentage.compareTo(mentionTresBien) >= 0) return "TRES BIEN";
-        if (pourcentage.compareTo(mentionBien) >= 0) return "BIEN";
-        if (pourcentage.compareTo(mentionSatisfaction) >= 0) return "SATISFACTION";
-        return "ECHEC";
+        if (pourcentage.compareTo(mentionExcellent) >= 0) return "Très Bien";
+        if (pourcentage.compareTo(mentionTresBien) >= 0) return "Bien";
+        if (pourcentage.compareTo(mentionBien) >= 0) return "Assez Bien";
+        if (pourcentage.compareTo(mentionSatisfaction) >= 0) return "Passable";
+        return "Insuffisant";
     }
 
     private ReportCardResponse toResponse(ReportCard reportCard) {
         ReportCardResponse response = reportCardMapper.toResponse(reportCard);
+        if (response.getPourcentage() != null) {
+            response.setMoyenne(response.getPourcentage().divide(new BigDecimal("5"), 2, RoundingMode.HALF_UP));
+        }
+        if (reportCard.getPeriod() != null && reportCard.getPeriod().getTrimester() != null) {
+            response.setTrimesterNom(reportCard.getPeriod().getTrimester().getNom());
+        }
+        if (reportCard.getEnrollment() != null && reportCard.getEnrollment().getStudent() != null) {
+            com.bulletin.entity.Student student = reportCard.getEnrollment().getStudent();
+            String fullName = student.getNom();
+            if (student.getPostnom() != null && !student.getPostnom().isEmpty()) {
+                fullName += " " + student.getPostnom();
+            }
+            if (student.getPrenom() != null && !student.getPrenom().isEmpty()) {
+                fullName += " " + student.getPrenom();
+            }
+            response.setStudentNom(fullName);
+            response.setEleveNomComplet(fullName);
+            response.setElevePrenom(student.getPrenom());
+            response.setEleveNom(student.getNom());
+        }
+        response.setMention(mapMentionToFrench(reportCard.getMention()));
         List<ReportCardDetailResponse> details = reportCardDetailRepository.findByReportCardId(reportCard.getId()).stream()
                 .map(d -> ReportCardDetailResponse.builder()
                         .id(d.getId())
@@ -272,6 +293,18 @@ public class ReportCardService {
                 .toList();
         response.setDetails(details);
         return response;
+    }
+
+    private String mapMentionToFrench(String mention) {
+        if (mention == null) return null;
+        return switch (mention) {
+            case "EXCELLENT" -> "Très Bien";
+            case "TRES BIEN" -> "Bien";
+            case "BIEN" -> "Assez Bien";
+            case "SATISFACTION" -> "Passable";
+            case "ECHEC" -> "Insuffisant";
+            default -> mention;
+        };
     }
 
     private void assertCanGenerateBulletins(Classroom classroom) {

@@ -20,11 +20,16 @@ public class ReportCardResponse {
     private Long studentId;
     private String studentNom;
     private String studentMatricule;
+    private String eleveNomComplet;
+    private String elevePrenom;
+    private String eleveNom;
     private Long classroomId;
     private String classroomNom;
     private Long periodId;
     private String periodNom;
+    private String trimesterNom;
     private BigDecimal pourcentage;
+    private BigDecimal moyenne;
     private BigDecimal totalPoints;
     private BigDecimal maximumPoints;
     private Integer rang;

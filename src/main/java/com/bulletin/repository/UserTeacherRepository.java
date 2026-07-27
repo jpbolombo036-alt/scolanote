@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface UserTeacherRepository extends JpaRepository<UserTeacher, Long> {
     List<UserTeacher> findBySchoolId(Long schoolId);
+
+    boolean existsByUser_IdAndTeacher_Id(Long userId, Long teacherId);
 }

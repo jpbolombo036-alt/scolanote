@@ -33,10 +33,19 @@ public class JwtTokenProvider {
             throw new IllegalStateException("JWT secret is not configured. Set app.jwt.secret or JWT_SECRET to a secure value.");
         }
 
-        int secretLength = jwtSecret.getBytes(StandardCharsets.UTF_8).length;
+        String trimmedSecret = jwtSecret.trim();
+        int secretLength = trimmedSecret.getBytes(StandardCharsets.UTF_8).length;
         if (secretLength < 32) {
             throw new IllegalStateException("JWT secret must be at least 256 bits (32 bytes). Current secret length: " + secretLength + " bytes.");
         }
+
+        if (trimmedSecret.equals("please-change-this-in-production-use-a-secure-random-key-at-least-256-bits")
+                || trimmedSecret.equalsIgnoreCase("your_jwt_secret_here")
+                || trimmedSecret.contains("change") && trimmedSecret.contains("please")) {
+            throw new IllegalStateException("JWT secret is insecure. Replace the placeholder with a secure random value and do not commit it to source control.");
+        }
+
+        jwtSecret = trimmedSecret;
     }
 
     public String generateToken(Authentication authentication) {

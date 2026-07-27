@@ -5,7 +5,6 @@ import com.bulletin.dto.grade.AssessmentResponse;
 import com.bulletin.entity.Assessment;
 import com.bulletin.entity.AssessmentType;
 import com.bulletin.entity.Period;
-import com.bulletin.entity.Teacher;
 import com.bulletin.entity.TeachingAssignment;
 import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.AssessmentMapper;
@@ -13,7 +12,6 @@ import com.bulletin.repository.AssessmentRepository;
 import com.bulletin.repository.AssessmentTypeRepository;
 import com.bulletin.repository.PeriodRepository;
 import com.bulletin.repository.TeachingAssignmentRepository;
-import com.bulletin.repository.UserTeacherRepository;
 import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,88 +30,60 @@ public class AssessmentService {
     private final AssessmentTypeRepository assessmentTypeRepository;
     private final PeriodRepository periodRepository;
     private final AssessmentMapper assessmentMapper;
-    private final UserTeacherRepository userTeacherRepository;
     private final SecurityUtils securityUtils;
     private final PeriodClosureService periodClosureService;
-
-    private boolean isSuperAdmin() {
-        return securityUtils.isSuperAdmin();
-    }
-
-    private Long requireSchoolId() {
-        Long schoolId = securityUtils.getCurrentSchoolId();
-        if (schoolId == null) {
-            throw new SecurityException("École non définie pour l'utilisateur connecté");
-        }
-        return schoolId;
-    }
 
     @Transactional
     public AssessmentResponse createAssessment(AssessmentRequest request) {
         periodClosureService.assertPeriodeOuverte(request.getPeriodId());
         TeachingAssignment assignment = findAssignment(request.getAssignmentId());
-        assertTeacherOwnsAssignment(assignment);
+        securityUtils.assertTeacherOwnsAssignment(assignment);
         Assessment assessment = assessmentMapper.toEntity(request);
         assessment.setAssignment(assignment);
         assessment.setAssessmentType(findAssessmentType(request.getAssessmentTypeId()));
         assessment.setPeriod(findPeriod(request.getPeriodId()));
         Assessment saved = assessmentRepository.save(assessment);
         log.info("Évaluation créée: {}", saved.getId());
-        return assessmentMapper.toResponse(saved);
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public AssessmentResponse getAssessment(Long id) {
-        return assessmentMapper.toResponse(findById(id));
+        Assessment assessment = findById(id);
+        securityUtils.assertSchoolAccess(assessment.getSchoolId());
+        return toResponse(assessment);
     }
 
     @Transactional(readOnly = true)
     public List<AssessmentResponse> getAccessibleAssessments() {
-        if (isSuperAdmin()) {
-            return assessmentRepository.findAll().stream()
-                    .map(assessment -> {
-                        if (assessment.getAssessmentType() == null || assessment.getPeriod() == null || assessment.getAssignment() == null) {
-                            return null;
-                        }
-                        return assessmentMapper.toResponse(assessment);
-                    })
-                    .filter(java.util.Objects::nonNull)
-                    .toList();
-        }
-        return assessmentRepository.findBySchoolId(requireSchoolId()).stream()
-                .map(assessment -> {
-                    if (assessment.getAssessmentType() == null || assessment.getPeriod() == null || assessment.getAssignment() == null) {
-                        return null;
-                    }
-                    return assessmentMapper.toResponse(assessment);
-                })
-                .filter(java.util.Objects::nonNull)
+        List<Assessment> assessments = securityUtils.isSuperAdmin()
+                ? assessmentRepository.findAllComplete()
+                : assessmentRepository.findCompleteBySchoolId(securityUtils.requireSchoolId());
+        return assessments.stream()
+                .map(this::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<AssessmentResponse> getByAssignment(Long assignmentId) {
-        return assessmentRepository.findByAssignmentId(assignmentId).stream()
-                .map(assessment -> {
-                    if (assessment.getAssessmentType() == null || assessment.getPeriod() == null || assessment.getAssignment() == null) {
-                        return null;
-                    }
-                    return assessmentMapper.toResponse(assessment);
-                })
-                .filter(java.util.Objects::nonNull)
+        TeachingAssignment assignment = findAssignment(assignmentId);
+        securityUtils.assertSchoolAccess(assignment.getSchoolId());
+        List<Assessment> assessments = securityUtils.isSuperAdmin()
+                ? assessmentRepository.findCompleteByAssignmentId(assignmentId)
+                : assessmentRepository.findByAssignmentIdAndSchoolId(assignmentId, securityUtils.requireSchoolId());
+        return assessments.stream()
+                .map(this::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<AssessmentResponse> getByTerm(Long termId) {
-        return assessmentRepository.findByPeriodId(termId).stream()
-                .map(assessment -> {
-                    if (assessment.getAssessmentType() == null || assessment.getPeriod() == null || assessment.getAssignment() == null) {
-                        return null;
-                    }
-                    return assessmentMapper.toResponse(assessment);
-                })
-                .filter(java.util.Objects::nonNull)
+    public List<AssessmentResponse> getByTerm(Long periodId) {
+        findPeriod(periodId);
+        List<Assessment> assessments = securityUtils.isSuperAdmin()
+                ? assessmentRepository.findCompleteByPeriodId(periodId)
+                : assessmentRepository.findByPeriodIdAndSchoolId(periodId, securityUtils.requireSchoolId());
+        return assessments.stream()
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -121,34 +91,40 @@ public class AssessmentService {
     public AssessmentResponse updateAssessment(Long id, AssessmentRequest request) {
         periodClosureService.assertPeriodeOuverte(request.getPeriodId());
         Assessment assessment = findById(id);
+        securityUtils.assertSchoolAccess(assessment.getSchoolId());
         assessmentMapper.updateEntity(request, assessment);
         TeachingAssignment assignment = findAssignment(request.getAssignmentId());
-        assertTeacherOwnsAssignment(assignment);
+        securityUtils.assertTeacherOwnsAssignment(assignment);
         assessment.setAssignment(assignment);
         assessment.setAssessmentType(findAssessmentType(request.getAssessmentTypeId()));
         assessment.setPeriod(findPeriod(request.getPeriodId()));
         Assessment saved = assessmentRepository.save(assessment);
         log.info("Évaluation mise à jour: {}", saved.getId());
-        return assessmentMapper.toResponse(saved);
+        return toResponse(saved);
     }
 
     @Transactional
     public void deleteAssessment(Long id) {
         Assessment assessment = findById(id);
-        assertTeacherOwnsAssignment(assessment.getAssignment());
+        securityUtils.assertSchoolAccess(assessment.getSchoolId());
+        securityUtils.assertTeacherOwnsAssignment(assessment.getAssignment());
         assessment.setDeletedAt(java.time.LocalDateTime.now());
         assessmentRepository.save(assessment);
         log.info("Évaluation supprimée (soft): {}", id);
     }
 
     public Assessment findById(Long id) {
-        return assessmentRepository.findById(id)
+        Assessment assessment = assessmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Évaluation non trouvée avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(assessment.getSchoolId());
+        return assessment;
     }
 
     private TeachingAssignment findAssignment(Long id) {
-        return teachingAssignmentRepository.findById(id)
+        TeachingAssignment assignment = teachingAssignmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Affectation non trouvée avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(assignment.getSchoolId());
+        return assignment;
     }
 
     private AssessmentType findAssessmentType(Long id) {
@@ -161,25 +137,11 @@ public class AssessmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Période non trouvée avec l'ID: " + id));
     }
 
-    /**
-     * Règle section 7 : un professeur ne peut créer/modifier/supprimer que les évaluations
-     * de ses propres affectations. La direction a accès à tout.
-     */
-    private void assertTeacherOwnsAssignment(TeachingAssignment assignment) {
-        if (securityUtils.isDirection()) {
-            return;
+    private AssessmentResponse toResponse(Assessment assessment) {
+        if (assessment.getAssessmentType() == null || assessment.getPeriod() == null || assessment.getAssignment() == null) {
+            log.warn("Évaluation {} ignorée : relations incomplètes", assessment.getId());
+            throw new ResourceNotFoundException("Évaluation incomplète avec l'ID: " + assessment.getId());
         }
-        Long currentUserId = securityUtils.getCurrentUserId();
-        if (currentUserId == null) {
-            throw new SecurityException("Authentification requise");
-        }
-        Teacher teacher = assignment.getTeacher();
-        boolean owns = userTeacherRepository.findAll().stream()
-                .anyMatch(ut -> ut.getUser() != null && ut.getUser().getId().equals(currentUserId)
-                        && ut.getTeacher() != null && teacher != null
-                        && ut.getTeacher().getId().equals(teacher.getId()));
-        if (!owns) {
-            throw new SecurityException("Accès refusé : vous ne pouvez agir que sur vos propres affectations");
-        }
+        return assessmentMapper.toResponse(assessment);
     }
 }

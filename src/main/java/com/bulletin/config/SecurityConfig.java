@@ -83,9 +83,15 @@ public class SecurityConfig {
                         .accessDeniedHandler(jwtAccessDeniedHandler())
                 )
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers("/", "/auth/**").permitAll();
+                    auth.requestMatchers("/", "/health").permitAll();
+                    auth.requestMatchers(
+                            "/auth/status",
+                            "/auth/token",
+                            "/auth/mot-de-passe-oublie",
+                            "/auth/reinitialiser-mot-de-passe",
+                            "/auth/init-admin"
+                    ).permitAll();
                     auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll();
-                    auth.requestMatchers("/health").permitAll();
                     if (localProfile) {
                         auth.requestMatchers("/h2-console/**").permitAll();
                         auth.requestMatchers("/debug/**").permitAll();

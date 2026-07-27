@@ -64,18 +64,19 @@ public class ClassroomService {
         return classroomMapper.toResponse(findById(id));
     }
 
+    private boolean isClassroomValid(Classroom classroom) {
+        return classroom != null
+                && classroom.getAcademicYear() != null
+                && classroom.getAcademicYear().getSchool() != null
+                && classroom.getLevel() != null
+                && classroom.getSection() != null;
+    }
+
     @Transactional(readOnly = true)
     public Page<ClassroomResponse> getAccessibleClassrooms(Pageable pageable) {
         if (isSuperAdmin()) {
             return classroomRepository.findAll(pageable)
-                    .map(classroom -> {
-                        if (classroom.getAcademicYear() == null || classroom.getLevel() == null
-                                || classroom.getSection() == null || classroom.getOption() == null
-                                || classroom.getReportTemplate() == null) {
-                            return null;
-                        }
-                        return classroomMapper.toResponse(classroom);
-                    });
+                    .map(classroom -> classroomMapper.toResponse(classroom));
         }
 
         List<Long> academicYearIds = academicYearRepository.findBySchoolId(requireSchoolId()).stream()
@@ -83,29 +84,15 @@ public class ClassroomService {
                 .toList();
 
         return classroomRepository.findByAcademicYearIdIn(academicYearIds, pageable)
-                .map(classroom -> {
-                    if (classroom.getAcademicYear() == null || classroom.getLevel() == null
-                            || classroom.getSection() == null || classroom.getOption() == null
-                            || classroom.getReportTemplate() == null) {
-                        return null;
-                    }
-                    return classroomMapper.toResponse(classroom);
-                });
+                .map(classroom -> classroomMapper.toResponse(classroom));
     }
 
     @Transactional(readOnly = true)
     public List<ClassroomResponse> getAccessibleClassrooms() {
         if (isSuperAdmin()) {
             return classroomRepository.findAll().stream()
-                    .map(classroom -> {
-                        if (classroom.getAcademicYear() == null || classroom.getLevel() == null
-                                || classroom.getSection() == null || classroom.getOption() == null
-                                || classroom.getReportTemplate() == null) {
-                            return null;
-                        }
-                        return classroomMapper.toResponse(classroom);
-                    })
-                    .filter(java.util.Objects::nonNull)
+                    .filter(this::isClassroomValid)
+                    .map(classroomMapper::toResponse)
                     .toList();
         }
 
@@ -114,30 +101,16 @@ public class ClassroomService {
                 .toList();
 
         return classroomRepository.findByAcademicYearIdIn(academicYearIds).stream()
-                .map(classroom -> {
-                    if (classroom.getAcademicYear() == null || classroom.getLevel() == null
-                            || classroom.getSection() == null || classroom.getOption() == null
-                            || classroom.getReportTemplate() == null) {
-                        return null;
-                    }
-                    return classroomMapper.toResponse(classroom);
-                })
-                .filter(java.util.Objects::nonNull)
+                .filter(this::isClassroomValid)
+                .map(classroomMapper::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<ClassroomResponse> getClassroomsByAcademicYear(Long academicYearId) {
         return classroomRepository.findByAcademicYearId(academicYearId).stream()
-                .map(classroom -> {
-                    if (classroom.getAcademicYear() == null || classroom.getLevel() == null
-                            || classroom.getSection() == null || classroom.getOption() == null
-                            || classroom.getReportTemplate() == null) {
-                        return null;
-                    }
-                    return classroomMapper.toResponse(classroom);
-                })
-                .filter(java.util.Objects::nonNull)
+                .filter(this::isClassroomValid)
+                .map(classroomMapper::toResponse)
                 .toList();
     }
 
@@ -168,8 +141,14 @@ public class ClassroomService {
     }
 
     public Classroom findById(Long id) {
-        return classroomRepository.findById(id)
+        Classroom classroom = classroomRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Classe non trouvée avec l'ID: " + id));
+        if (classroom.getAcademicYear() == null || classroom.getAcademicYear().getSchool() == null
+                || classroom.getAcademicYear().getSchool().getId() == null) {
+            throw new SecurityException("Accès refusé : classe sans année scolaire ou école associée");
+        }
+        securityUtils.assertSchoolAccess(classroom.getAcademicYear().getSchool().getId());
+        return classroom;
     }
 
     private AcademicYear findAcademicYear(Long id) {

@@ -128,8 +128,10 @@ public class UserService {
     }
 
     public User findById(Long id) {
-        return userRepository.findById(id)
+        User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(user.getSchoolId());
+        return user;
     }
 
     private UserResponse toResponse(User user) {

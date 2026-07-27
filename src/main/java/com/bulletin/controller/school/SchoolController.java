@@ -1,7 +1,7 @@
 package com.bulletin.controller.school;
 
+import com.bulletin.dto.school.SchoolCreationResponse;
 import com.bulletin.dto.school.SchoolRequest;
-import com.bulletin.dto.school.SchoolResponse;
 import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.SchoolService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,7 +27,7 @@ public class SchoolController {
 
     @PostMapping
     @Operation(summary = "Créer une école", description = "Crée un nouvel établissement scolaire (SUPER_ADMIN uniquement)")
-    public ResponseEntity<SchoolResponse> createSchool(@Valid @RequestBody SchoolRequest request) {
+    public ResponseEntity<SchoolCreationResponse> createSchool(@Valid @RequestBody SchoolRequest request) {
         if (!securityUtils.isSuperAdmin()) {
             throw new SecurityException("Accès refusé : seul SUPER_ADMIN peut créer une école");
         }

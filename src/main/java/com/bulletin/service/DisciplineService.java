@@ -129,8 +129,10 @@ public class DisciplineService {
     }
 
     public Discipline findById(Long id) {
-        return disciplineRepository.findById(id)
+        Discipline discipline = disciplineRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Discipline non trouvée avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(discipline.getSchoolId());
+        return discipline;
     }
 
     private Student findStudent(Long id) {

@@ -1,5 +1,9 @@
 package com.bulletin.security;
 
+import com.bulletin.entity.Teacher;
+import com.bulletin.entity.TeachingAssignment;
+import com.bulletin.repository.UserTeacherRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -9,7 +13,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
+@RequiredArgsConstructor
 public class SecurityUtils {
+
+    private final UserTeacherRepository userTeacherRepository;
 
     public Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -86,5 +93,44 @@ public class SecurityUtils {
             return userPrincipal.getSchoolId();
         }
         return null;
+    }
+
+    public Long requireSchoolId() {
+        Long schoolId = getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
+
+    public void assertSchoolAccess(Long entitySchoolId) {
+        if (isSuperAdmin()) {
+            return;
+        }
+        Long schoolId = requireSchoolId();
+        if (entitySchoolId == null || !entitySchoolId.equals(schoolId)) {
+            throw new SecurityException("Accès refusé : ressource hors de votre école");
+        }
+    }
+
+    /**
+     * Règle section 7 : un professeur ne peut agir que sur ses propres affectations.
+     * La direction a accès à tout.
+     */
+    public void assertTeacherOwnsAssignment(TeachingAssignment assignment) {
+        if (isDirection()) {
+            return;
+        }
+        Long currentUserId = getCurrentUserId();
+        if (currentUserId == null) {
+            throw new SecurityException("Authentification requise");
+        }
+        Teacher teacher = assignment.getTeacher();
+        if (teacher == null) {
+            throw new SecurityException("Accès refusé : affectation sans professeur");
+        }
+        if (!userTeacherRepository.existsByUser_IdAndTeacher_Id(currentUserId, teacher.getId())) {
+            throw new SecurityException("Accès refusé : vous ne pouvez agir que sur vos propres affectations");
+        }
     }
 }

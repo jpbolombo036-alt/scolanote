@@ -1,5 +1,6 @@
 package com.bulletin.service;
 
+import com.bulletin.dto.school.SchoolCreationResponse;
 import com.bulletin.dto.school.SchoolRequest;
 import com.bulletin.dto.school.SchoolResponse;
 import com.bulletin.entity.Role;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -38,12 +40,36 @@ public class SchoolService {
     private final SecurityUtils securityUtils;
 
     @Transactional
-    public SchoolResponse createSchool(SchoolRequest request) {
+    public SchoolCreationResponse createSchool(SchoolRequest request) {
         School school = schoolMapper.toEntity(request);
         School saved = schoolRepository.save(school);
         log.info("École créée: {}", saved.getId());
-        createSchoolAdmin(saved);
-        return schoolMapper.toResponse(saved);
+
+        String adminUsername = "admin@" + saved.getCode();
+        String adminPassword = generateSecurePassword();
+        User admin = User.builder()
+                .username(adminUsername)
+                .email(saved.getEmail())
+                .password(passwordEncoder.encode(adminPassword))
+                .enabled(true)
+                .schoolId(saved.getId())
+                .passwordResetRequired(true)
+                .build();
+        admin = userRepository.save(admin);
+
+        Role superAdminRole = roleRepository.findByNom("SUPER_ADMIN")
+                .orElseThrow(() -> new ResourceNotFoundException("Rôle SUPER_ADMIN non trouvé"));
+        userRoleRepository.save(UserRole.builder()
+                .user(admin)
+                .role(superAdminRole)
+                .build());
+
+        log.info("Admin automatique créé pour l'école {}: {}", saved.getId(), adminUsername);
+        return SchoolCreationResponse.builder()
+                .school(schoolMapper.toResponse(saved))
+                .adminUsername(adminUsername)
+                .adminPassword(adminPassword)
+                .build();
     }
 
     @Transactional(readOnly = true)
@@ -107,6 +133,10 @@ public class SchoolService {
         return schoolMapper.toResponse(saved);
     }
 
+    private String generateSecurePassword() {
+        return UUID.randomUUID().toString().replaceAll("[-_]{1}", "");
+    }
+
     @Transactional
     public void deleteSchool(Long id) {
         School school = findById(id);
@@ -116,38 +146,15 @@ public class SchoolService {
     }
 
     public School findById(Long id) {
-        return schoolRepository.findById(id)
+        School school = schoolRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("École non trouvée avec l'ID: " + id));
+        if (!isSuperAdmin()) {
+            Long schoolId = securityUtils.getCurrentSchoolId();
+            if (schoolId == null || !schoolId.equals(school.getId())) {
+                throw new SecurityException("Accès refusé : école hors de votre périmètre");
+            }
+        }
+        return school;
     }
 
-    private void createSchoolAdmin(School school) {
-        Role superAdminRole = roleRepository.findByNom("SUPER_ADMIN")
-                .orElseThrow(() -> new ResourceNotFoundException("Rôle SUPER_ADMIN non trouvé"));
-
-        String username = school.getEmail();
-        String rawPassword = "123456";
-
-        User admin = User.builder()
-                .username(username)
-                .email(school.getEmail())
-                .password(passwordEncoder.encode(rawPassword))
-                .enabled(true)
-                .schoolId(school.getId())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
-
-        userRepository.save(admin);
-        log.info("Utilisateur admin créé pour l'école {}: {}", school.getId(), username);
-
-        UserRole userRole = UserRole.builder()
-                .user(admin)
-                .role(superAdminRole)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
-
-        userRoleRepository.save(userRole);
-        log.info("Rôle SUPER_ADMIN attribué à l'utilisateur {}", username);
-    }
 }

@@ -167,8 +167,15 @@ public class PeriodService {
     }
 
     public Period findById(Long id) {
-        return periodRepository.findById(id)
+        Period period = periodRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Période non trouvée avec l'ID: " + id));
+        if (period.getTrimester() == null || period.getTrimester().getAcademicYear() == null
+                || period.getTrimester().getAcademicYear().getSchool() == null
+                || period.getTrimester().getAcademicYear().getSchool().getId() == null) {
+            throw new SecurityException("Accès refusé : période sans trimestre, année scolaire ou école associée");
+        }
+        securityUtils.assertSchoolAccess(period.getTrimester().getAcademicYear().getSchool().getId());
+        return period;
     }
 
     private Trimester findTrimester(Long id) {

@@ -5,15 +5,11 @@ import com.bulletin.dto.grade.GradeResponse;
 import com.bulletin.entity.Assessment;
 import com.bulletin.entity.Grade;
 import com.bulletin.entity.Student;
-import com.bulletin.entity.TeachingAssignment;
-import com.bulletin.entity.Teacher;
 import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.GradeMapper;
 import com.bulletin.repository.AssessmentRepository;
 import com.bulletin.repository.GradeRepository;
 import com.bulletin.repository.StudentRepository;
-import com.bulletin.repository.TeachingAssignmentRepository;
-import com.bulletin.repository.UserTeacherRepository;
 import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,170 +29,124 @@ public class GradeService {
     private final AssessmentRepository assessmentRepository;
     private final StudentRepository studentRepository;
     private final GradeMapper gradeMapper;
-    private final TeachingAssignmentRepository teachingAssignmentRepository;
-    private final UserTeacherRepository userTeacherRepository;
     private final SecurityUtils securityUtils;
     private final PeriodClosureService periodClosureService;
-
-    private boolean isSuperAdmin() {
-        return securityUtils.isSuperAdmin();
-    }
-
-    private Long requireSchoolId() {
-        Long schoolId = securityUtils.getCurrentSchoolId();
-        if (schoolId == null) {
-            throw new SecurityException("École non définie pour l'utilisateur connecté");
-        }
-        return schoolId;
-    }
 
     @Transactional
     public GradeResponse createGrade(GradeRequest request) {
         Assessment assessment = findAssessment(request.getAssessmentId());
         periodClosureService.assertPeriodeOuverte(assessment.getPeriod().getId());
-        assertTeacherOwnsAssignment(assessment.getAssignment());
+        securityUtils.assertTeacherOwnsAssignment(assessment.getAssignment());
+        Student student = findStudent(request.getStudentId());
         Grade grade = gradeMapper.toEntity(request);
         grade.setAssessment(assessment);
-        grade.setStudent(findStudent(request.getStudentId()));
+        grade.setStudent(student);
         Grade saved = gradeRepository.save(grade);
         log.info("Note créée: {}", saved.getId());
-        return gradeMapper.toResponse(saved);
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public GradeResponse getGrade(Long id) {
-        return gradeMapper.toResponse(findById(id));
+        Grade grade = findById(id);
+        securityUtils.assertSchoolAccess(grade.getSchoolId());
+        return toResponse(grade);
     }
 
     @Transactional(readOnly = true)
     public Page<GradeResponse> getAccessibleGrades(Pageable pageable) {
-        Page<Grade> page = isSuperAdmin()
-                ? gradeRepository.findAll(pageable)
-                : gradeRepository.findBySchoolId(requireSchoolId(), pageable);
-
-        List<GradeResponse> content = page.getContent().stream()
-                .map(grade -> {
-                    if (grade.getStudent() == null || grade.getAssessment() == null) {
-                        return null;
-                    }
-                    return gradeMapper.toResponse(grade);
-                })
-                .filter(java.util.Objects::nonNull)
-                .toList();
-
-        return new org.springframework.data.domain.PageImpl<>(content, pageable, page.getTotalElements());
+        Page<Grade> page = securityUtils.isSuperAdmin()
+                ? gradeRepository.findAllComplete(pageable)
+                : gradeRepository.findCompleteBySchoolId(securityUtils.requireSchoolId(), pageable);
+        return page.map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     public List<GradeResponse> getAccessibleGrades() {
-        if (isSuperAdmin()) {
-            return gradeRepository.findAll().stream()
-                    .map(grade -> {
-                        if (grade.getStudent() == null || grade.getAssessment() == null) {
-                            return null;
-                        }
-                        return gradeMapper.toResponse(grade);
-                    })
-                    .filter(java.util.Objects::nonNull)
-                    .toList();
-        }
-        return gradeRepository.findBySchoolId(requireSchoolId()).stream()
-                .map(grade -> {
-                    if (grade.getStudent() == null || grade.getAssessment() == null) {
-                        return null;
-                    }
-                    return gradeMapper.toResponse(grade);
-                })
-                .filter(java.util.Objects::nonNull)
+        List<Grade> grades = securityUtils.isSuperAdmin()
+                ? gradeRepository.findAllComplete()
+                : gradeRepository.findCompleteBySchoolId(securityUtils.requireSchoolId());
+        return grades.stream()
+                .map(this::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<GradeResponse> getByAssessment(Long assessmentId) {
-        return gradeRepository.findByAssessmentId(assessmentId).stream()
-                .map(grade -> {
-                    if (grade.getStudent() == null || grade.getAssessment() == null) {
-                        return null;
-                    }
-                    return gradeMapper.toResponse(grade);
-                })
-                .filter(java.util.Objects::nonNull)
+        Assessment assessment = findAssessment(assessmentId);
+        List<Grade> grades = securityUtils.isSuperAdmin()
+                ? gradeRepository.findCompleteByAssessmentId(assessmentId)
+                : gradeRepository.findByAssessmentIdAndSchoolId(assessmentId, assessment.getSchoolId());
+        return grades.stream()
+                .map(this::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<GradeResponse> getByStudent(Long studentId) {
-        return gradeRepository.findByStudentId(studentId).stream()
-                .map(grade -> {
-                    if (grade.getStudent() == null || grade.getAssessment() == null) {
-                        return null;
-                    }
-                    return gradeMapper.toResponse(grade);
-                })
-                .filter(java.util.Objects::nonNull)
+        Student student = findStudent(studentId);
+        List<Grade> grades = securityUtils.isSuperAdmin()
+                ? gradeRepository.findCompleteByStudentId(studentId)
+                : gradeRepository.findByStudentIdAndSchoolId(studentId, student.getSchoolId());
+        return grades.stream()
+                .map(this::toResponse)
                 .toList();
     }
 
     @Transactional
     public GradeResponse updateGrade(Long id, GradeRequest request) {
         Grade grade = findById(id);
+        securityUtils.assertSchoolAccess(grade.getSchoolId());
         gradeMapper.updateEntity(request, grade);
         Assessment assessment = findAssessment(request.getAssessmentId());
         periodClosureService.assertPeriodeOuverte(assessment.getPeriod().getId());
-        assertTeacherOwnsAssignment(assessment.getAssignment());
+        securityUtils.assertTeacherOwnsAssignment(assessment.getAssignment());
         grade.setAssessment(assessment);
         grade.setStudent(findStudent(request.getStudentId()));
         Grade saved = gradeRepository.save(grade);
         log.info("Note mise à jour: {}", saved.getId());
-        return gradeMapper.toResponse(saved);
+        return toResponse(saved);
     }
 
     @Transactional
     public void deleteGrade(Long id) {
         Grade grade = findById(id);
+        securityUtils.assertSchoolAccess(grade.getSchoolId());
         if (grade.getAssessment() == null || grade.getAssessment().getAssignment() == null) {
             throw new ResourceNotFoundException("Affectation non trouvée pour la note ID: " + id);
         }
-        assertTeacherOwnsAssignment(grade.getAssessment().getAssignment());
+        securityUtils.assertTeacherOwnsAssignment(grade.getAssessment().getAssignment());
         grade.setDeletedAt(java.time.LocalDateTime.now());
         gradeRepository.save(grade);
         log.info("Note supprimée (soft): {}", id);
     }
 
     public Grade findById(Long id) {
-        return gradeRepository.findById(id)
+        Grade grade = gradeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Note non trouvée avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(grade.getSchoolId());
+        return grade;
     }
 
     private Assessment findAssessment(Long id) {
-        return assessmentRepository.findById(id)
+        Assessment assessment = assessmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Évaluation non trouvée avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(assessment.getSchoolId());
+        return assessment;
     }
 
     private Student findStudent(Long id) {
-        return studentRepository.findById(id)
+        Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Élève non trouvé avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(student.getSchoolId());
+        return student;
     }
 
-    /**
-     * Règle section 7 : un professeur ne peut encoder/modifier que les notes
-     * correspondant à ses propres affectations. La direction (admin/directeur/préfet) a accès à tout.
-     */
-    private void assertTeacherOwnsAssignment(TeachingAssignment assignment) {
-        if (securityUtils.isDirection()) {
-            return;
+    private GradeResponse toResponse(Grade grade) {
+        if (grade.getStudent() == null || grade.getAssessment() == null) {
+            log.warn("Note {} ignorée : relations incomplètes", grade.getId());
+            throw new ResourceNotFoundException("Note incomplète avec l'ID: " + grade.getId());
         }
-        Long currentUserId = securityUtils.getCurrentUserId();
-        if (currentUserId == null) {
-            throw new SecurityException("Authentification requise");
-        }
-        Teacher teacher = assignment.getTeacher();
-        boolean owns = userTeacherRepository.findAll().stream()
-                .anyMatch(ut -> ut.getUser() != null && ut.getUser().getId().equals(currentUserId)
-                        && ut.getTeacher() != null && teacher != null
-                        && ut.getTeacher().getId().equals(teacher.getId()));
-        if (!owns) {
-            throw new SecurityException("Accès refusé : vous ne pouvez agir que sur vos propres affectations");
-        }
+        return gradeMapper.toResponse(grade);
     }
 }

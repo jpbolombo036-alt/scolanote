@@ -102,8 +102,13 @@ public class AcademicYearService {
     }
 
     public AcademicYear findById(Long id) {
-        return academicYearRepository.findById(id)
+        AcademicYear academicYear = academicYearRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Année scolaire non trouvée avec l'ID: " + id));
+        if (academicYear.getSchool() == null || academicYear.getSchool().getId() == null) {
+            throw new SecurityException("Accès refusé : année scolaire sans école associée");
+        }
+        securityUtils.assertSchoolAccess(academicYear.getSchool().getId());
+        return academicYear;
     }
 
     private School findSchool(Long id) {

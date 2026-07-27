@@ -91,7 +91,9 @@ public class TeacherService {
     }
 
     public Teacher findById(Long id) {
-        return teacherRepository.findById(id)
+        Teacher teacher = teacherRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Professeur non trouvé avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(teacher.getSchoolId());
+        return teacher;
     }
 }

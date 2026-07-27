@@ -82,6 +82,7 @@ public class UserStudentService {
     public void deleteUserStudent(Long id) {
         UserStudent userStudent = userStudentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Lien user-élève non trouvé avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(userStudent.getSchoolId());
         userStudentRepository.delete(userStudent);
         log.info("Lien user-élève supprimé: {}", id);
     }

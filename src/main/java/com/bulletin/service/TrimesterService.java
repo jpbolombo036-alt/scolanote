@@ -139,8 +139,14 @@ public class TrimesterService {
     }
 
     public Trimester findById(Long id) {
-        return trimesterRepository.findById(id)
+        Trimester trimester = trimesterRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Trimestre non trouvé avec l'ID: " + id));
+        if (trimester.getAcademicYear() == null || trimester.getAcademicYear().getSchool() == null
+                || trimester.getAcademicYear().getSchool().getId() == null) {
+            throw new SecurityException("Accès refusé : trimestre sans année scolaire ou école associée");
+        }
+        securityUtils.assertSchoolAccess(trimester.getAcademicYear().getSchool().getId());
+        return trimester;
     }
 
     private AcademicYear findAcademicYear(Long id) {

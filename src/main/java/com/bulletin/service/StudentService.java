@@ -41,9 +41,21 @@ public class StudentService {
     public StudentResponse createStudent(StudentRequest request) {
         Student student = studentMapper.toEntity(request);
         student.setSchoolId(requireSchoolId());
+        if (request.getMatricule() == null || request.getMatricule().isBlank()) {
+            student.setMatricule(generateStudentMatricule(student.getSchoolId()));
+        }
         Student saved = studentRepository.save(student);
         log.info("Élève créé: {}", saved.getId());
         return studentMapper.toResponse(saved);
+    }
+
+    private String generateStudentMatricule(Long schoolId) {
+        long nextIndex = studentRepository.countBySchoolId(schoolId) + 1;
+        String matricule;
+        do {
+            matricule = String.format("E%s-%04d", schoolId, nextIndex++);
+        } while (studentRepository.existsByMatricule(matricule));
+        return matricule;
     }
 
     @Transactional(readOnly = true)
@@ -91,7 +103,9 @@ public class StudentService {
     }
 
     public Student findById(Long id) {
-        return studentRepository.findById(id)
+        Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Élève non trouvé avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(student.getSchoolId());
+        return student;
     }
 }

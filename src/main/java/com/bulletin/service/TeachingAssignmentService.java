@@ -117,8 +117,10 @@ public class TeachingAssignmentService {
     }
 
     public TeachingAssignment findById(Long id) {
-        return teachingAssignmentRepository.findById(id)
+        TeachingAssignment teachingAssignment = teachingAssignmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Affectation non trouvée avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(teachingAssignment.getSchoolId());
+        return teachingAssignment;
     }
 
     private Teacher findTeacher(Long id) {

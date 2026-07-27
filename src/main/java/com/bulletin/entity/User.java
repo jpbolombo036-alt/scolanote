@@ -48,6 +48,10 @@ public class User {
     @Column(name = "school_id")
     private Long schoolId;
 
+    @Column(name = "password_reset_required")
+    @Builder.Default
+    private boolean passwordResetRequired = false;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

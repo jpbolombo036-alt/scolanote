@@ -116,8 +116,10 @@ public class AttendanceService {
     }
 
     public Attendance findById(Long id) {
-        return attendanceRepository.findById(id)
+        Attendance attendance = attendanceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Présence non trouvée avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(attendance.getSchoolId());
+        return attendance;
     }
 
     private Student findStudent(Long id) {

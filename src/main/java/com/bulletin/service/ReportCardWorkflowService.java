@@ -106,8 +106,10 @@ public class ReportCardWorkflowService {
     }
 
     private ReportCard findById(Long id) {
-        return reportCardRepository.findById(id)
+        ReportCard reportCard = reportCardRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bulletin non trouvé avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(reportCard.getSchoolId());
+        return reportCard;
     }
 
     private ReportCardWorkflowResponse toWorkflowResponse(ReportCard reportCard) {

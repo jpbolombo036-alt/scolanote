@@ -236,8 +236,10 @@ public class ReportCardService {
     }
 
     private ReportCard findById(Long id) {
-        return reportCardRepository.findById(id)
+        ReportCard reportCard = reportCardRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bulletin non trouvé avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(reportCard.getSchoolId());
+        return reportCard;
     }
 
     private String resolveMention(BigDecimal pourcentage) {

@@ -148,8 +148,10 @@ public class EnrollmentService {
     }
 
     public Enrollment findById(Long id) {
-        return enrollmentRepository.findById(id)
+        Enrollment enrollment = enrollmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inscription non trouvée avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(enrollment.getSchoolId());
+        return enrollment;
     }
 
     private Student findStudent(Long id) {

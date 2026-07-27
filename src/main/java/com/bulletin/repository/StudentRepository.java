@@ -9,4 +9,6 @@ import java.util.List;
 public interface StudentRepository extends JpaRepository<Student, Long> {
     List<Student> findBySchoolId(Long schoolId);
     Page<Student> findBySchoolId(Long schoolId, Pageable pageable);
+    long countBySchoolId(Long schoolId);
+    boolean existsByMatricule(String matricule);
 }

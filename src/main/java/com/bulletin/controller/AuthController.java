@@ -1,6 +1,7 @@
 package com.bulletin.controller;
 
 import com.bulletin.dto.*;
+import com.bulletin.dto.auth.InitAdminRequest;
 import com.bulletin.dto.auth.RegisterAgentRequest;
 import com.bulletin.dto.auth.RegisterAgentResponse;
 import com.bulletin.entity.Role;
@@ -15,6 +16,7 @@ import com.bulletin.security.UserPrincipalService;
 import com.bulletin.service.EmailService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.PostConstruct;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +54,21 @@ public class AuthController {
 
     @Value("${app.security.admin-init-key}")
     private String adminInitKey;
+
+    @PostConstruct
+    public void validateAdminInitKey() {
+        if (adminInitKey == null || adminInitKey.trim().isEmpty()) {
+            throw new IllegalStateException("Admin init key is not configured. Set app.security.admin-init-key or ADMIN_INIT_KEY to a secure value.");
+        }
+        String trimmedKey = adminInitKey.trim();
+        if (trimmedKey.length() < 16) {
+            throw new IllegalStateException("Admin init key must be at least 16 characters long.");
+        }
+        if (trimmedKey.equals("BULLETIN_INIT_2024_SECURE_KEY_CHANGE_ME") || trimmedKey.toLowerCase().contains("change_me") || trimmedKey.toLowerCase().contains("change")) {
+            throw new IllegalStateException("Admin init key is insecure. Replace the placeholder with a secure random value.");
+        }
+        adminInitKey = trimmedKey;
+    }
 
     @GetMapping("/status")
     @Operation(summary = "État du service", description = "Endpoint public pour le healthcheck de Railway")
@@ -108,7 +125,16 @@ public class AuthController {
 
         String password = request.getPassword();
         if (password == null || password.isBlank()) {
-            password = "123456";
+            return ResponseEntity.badRequest()
+                    .body(RegisterAgentResponse.builder()
+                            .message("Le mot de passe est requis et doit contenir au moins 8 caractères")
+                            .build());
+        }
+        if (password.length() < 8) {
+            return ResponseEntity.badRequest()
+                    .body(RegisterAgentResponse.builder()
+                            .message("Le mot de passe doit contenir au moins 8 caractères")
+                            .build());
         }
 
         User user = User.builder()
@@ -183,6 +209,13 @@ public class AuthController {
                                 .build());
             }
 
+            if (existingUser.isPasswordResetRequired()) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ErrorResponse.builder()
+                                .error("Réinitialisation du mot de passe requise. Utilisez le lien de réinitialisation pour définir un nouveau mot de passe.")
+                                .build());
+            }
+
             String token = jwtTokenProvider.generateToken(
                     (com.bulletin.security.UserPrincipal) userPrincipalService.loadUserById(existingUser.getId())
             );
@@ -234,17 +267,18 @@ public class AuthController {
 
     @PostMapping("/init-admin")
     @Operation(summary = "Initialiser l'admin", description = "Crée l'utilisateur admin initial (à utiliser uniquement pour la première configuration)")
-    public ResponseEntity<String> initAdmin(@RequestParam(required = false) String initKey) {
-        if (initKey == null || !initKey.equals(adminInitKey)) {
+    public ResponseEntity<String> initAdmin(@Valid @RequestBody InitAdminRequest request) {
+        if (!request.getInitKey().equals(adminInitKey)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("Clé d'initialisation invalide");
         }
 
-        User admin = userRepository.findByUsername("admin")
+        String username = "admin";
+        User admin = userRepository.findByUsername(username)
                 .orElseGet(() -> {
                     User newAdmin = User.builder()
-                            .username("admin")
-                            .password(passwordEncoder.encode("admin123"))
+                            .username(username)
+                            .password(passwordEncoder.encode(request.getPassword()))
                             .enabled(true)
                             .build();
                     return userRepository.save(newAdmin);
@@ -264,10 +298,9 @@ public class AuthController {
                     .user(admin)
                     .role(superAdminRole)
                     .build());
-            return ResponseEntity.ok("Admin initialisé. Username: admin, Password: admin123. CHANGEZ CE MOT DE PASSE IMMÉDIATEMENT !");
         }
 
-        return ResponseEntity.ok("Admin déjà initialisé. Username: admin");
+        return ResponseEntity.ok("Admin initialisé. Username: admin. CHANGEZ CE MOT DE PASSE IMMÉDIATEMENT !");
     }
 
     @PostMapping("/mot-de-passe-oublie")
@@ -291,6 +324,7 @@ public class AuthController {
                     .orElseThrow(() -> new RuntimeException("Token invalide ou expiré"));
 
             user.setPassword(passwordEncoder.encode(confirm.getNewPassword()));
+            user.setPasswordResetRequired(false);
             userRepository.save(user);
 
             return ResponseEntity.ok("Mot de passe réinitialisé avec succès");

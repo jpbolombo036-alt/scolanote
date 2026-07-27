@@ -49,25 +49,7 @@ public class DataInitializer {
             }
         }
 
-        if (userRepository.findByUsername("admin").isEmpty()) {
-            User admin = User.builder()
-                    .username("admin")
-                    .password(passwordEncoder.encode("admin123"))
-                    .enabled(true)
-                    .build();
-            userRepository.save(admin);
-            log.info("Utilisateur admin par défaut créé: admin / admin123");
-
-            Role superAdmin = roleRepository.findAll().stream()
-                    .filter(r -> "SUPER_ADMIN".equalsIgnoreCase(r.getNom()))
-                    .findFirst()
-                    .orElseThrow();
-            userRoleRepository.save(UserRole.builder()
-                    .user(admin)
-                    .role(superAdmin)
-                    .build());
-            log.info("Rôle SUPER_ADMIN assigné à l'utilisateur admin par défaut");
-        } else {
+        if (userRepository.findByUsername("admin").isPresent()) {
             User admin = userRepository.findByUsername("admin").get();
             Role superAdmin = roleRepository.findAll().stream()
                     .filter(r -> "SUPER_ADMIN".equalsIgnoreCase(r.getNom()))
@@ -83,6 +65,8 @@ public class DataInitializer {
                         .build());
                 log.info("Rôle SUPER_ADMIN assigné à l'utilisateur admin existant");
             }
+        } else {
+            log.info("Aucun administrateur par défaut créé. Utilisez l'endpoint /auth/init-admin pour créer l'admin initial.");
         }
 
         initPeriodes();

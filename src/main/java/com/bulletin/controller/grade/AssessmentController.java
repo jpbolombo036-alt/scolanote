@@ -2,7 +2,6 @@ package com.bulletin.controller.grade;
 
 import com.bulletin.dto.grade.AssessmentRequest;
 import com.bulletin.dto.grade.AssessmentResponse;
-import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.AssessmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,7 +20,6 @@ import java.util.List;
 public class AssessmentController {
 
     private final AssessmentService assessmentService;
-    private final SecurityUtils securityUtils;
 
     @PostMapping
     @Operation(summary = "Créer une évaluation", description = "Crée une évaluation pour une affectation")

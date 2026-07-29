@@ -2,6 +2,7 @@ package com.bulletin.controller.school;
 
 import com.bulletin.dto.school.SchoolCreationResponse;
 import com.bulletin.dto.school.SchoolRequest;
+import com.bulletin.dto.school.SchoolResponse;
 import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.SchoolService;
 import io.swagger.v3.oas.annotations.Operation;

@@ -52,13 +52,15 @@ public class AuthController {
     private final UserRoleRepository userRoleRepository;
     private final SecurityUtils securityUtils;
 
-    @Value("${app.security.admin-init-key}")
+    @Value("${app.security.admin-init-key:}")
     private String adminInitKey;
 
     @PostConstruct
     public void validateAdminInitKey() {
         if (adminInitKey == null || adminInitKey.trim().isEmpty()) {
-            throw new IllegalStateException("Admin init key is not configured. Set app.security.admin-init-key or ADMIN_INIT_KEY to a secure value.");
+            log.warn("ADMIN_INIT_KEY is not configured. The application will start, but /auth/init-admin will remain disabled until a secure key is provided.");
+            adminInitKey = null;
+            return;
         }
         String trimmedKey = adminInitKey.trim();
         if (trimmedKey.length() < 16) {
@@ -268,6 +270,10 @@ public class AuthController {
     @PostMapping("/init-admin")
     @Operation(summary = "Initialiser l'admin", description = "Crée l'utilisateur admin initial (à utiliser uniquement pour la première configuration)")
     public ResponseEntity<String> initAdmin(@Valid @RequestBody InitAdminRequest request) {
+        if (adminInitKey == null) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Admin init key non configurée. Le service ne permet pas d'initialiser l'admin.");
+        }
         if (!request.getInitKey().equals(adminInitKey)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body("Clé d'initialisation invalide");

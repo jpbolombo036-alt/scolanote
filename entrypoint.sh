@@ -20,4 +20,10 @@ while ! nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null; do
 done
 
 echo "PostgreSQL is ready. Starting application..."
-exec java -Dserver.port="${PORT:-8000}" -jar app.jar
+
+exec java \
+  -Dserver.port="${PORT:-8000}" \
+  -Xmx512m \
+  -Xms256m \
+  -XX:+UseContainerSupport \
+  -jar app.jar

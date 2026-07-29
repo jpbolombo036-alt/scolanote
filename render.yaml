@@ -20,12 +20,14 @@ services:
         fromDatabase:
           name: bulletin-db
           property: password
-      - key: HIBERNATE_DIALECT
-        value: org.hibernate.dialect.PostgreSQLDialect
+      - key: SPRING_JPA_DDL_AUTO
+        value: validate
       - key: JWT_SECRET
         generateValue: true
       - key: SERVER_PORT
         value: 8000
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
 
 databases:
   - name: bulletin-db

@@ -20,7 +20,7 @@ BEGIN
     UPDATE subjects SET school_id = default_school_id WHERE school_id IS NULL;
 
     -- Levels (niveaux)
-    UPDATE niveaux SET school_id = default_school_id WHERE school_id IS NULL;
+    UPDATE levels SET school_id = default_school_id WHERE school_id IS NULL;
 
     -- Sections
     UPDATE sections SET school_id = default_school_id WHERE school_id IS NULL;
@@ -56,7 +56,7 @@ END $$;
 -- Verify
 SELECT 'subjects' AS table_name, COUNT(*) AS without_school FROM subjects WHERE school_id IS NULL
 UNION ALL
-SELECT 'niveaux', COUNT(*) FROM niveaux WHERE school_id IS NULL
+SELECT 'levels', COUNT(*) FROM levels WHERE school_id IS NULL
 UNION ALL
 SELECT 'sections', COUNT(*) FROM sections WHERE school_id IS NULL
 UNION ALL

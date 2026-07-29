@@ -6,9 +6,9 @@ ALTER TABLE subjects ADD CONSTRAINT fk_subjects_school_id FOREIGN KEY (school_id
 CREATE INDEX IF NOT EXISTS idx_subjects_school_id ON subjects(school_id);
 
 -- Levels (niveaux)
-ALTER TABLE niveaux ADD COLUMN IF NOT EXISTS school_id BIGINT;
-ALTER TABLE niveaux ADD CONSTRAINT fk_niveaux_school_id FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE;
-CREATE INDEX IF NOT EXISTS idx_niveaux_school_id ON niveaux(school_id);
+ALTER TABLE levels ADD COLUMN IF NOT EXISTS school_id BIGINT;
+ALTER TABLE levels ADD CONSTRAINT fk_levels_school_id FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS idx_levels_school_id ON levels(school_id);
 
 -- Sections
 ALTER TABLE sections ADD COLUMN IF NOT EXISTS school_id BIGINT;

@@ -35,8 +35,13 @@ public class DashboardService {
     public DashboardResponse getDashboard() {
         Long schoolId = securityUtils.getCurrentSchoolId();
 
-        long studentCount = studentRepository.count();
-        long classroomCount = classroomRepository.count();
+        long studentCount = schoolId == null
+                ? studentRepository.count()
+                : studentRepository.countBySchoolId(schoolId);
+
+        long classroomCount = schoolId == null
+                ? classroomRepository.count()
+                : classroomRepository.countBySchoolId(schoolId);
 
         List<ReportCard> allCards = schoolId == null
                 ? reportCardRepository.findAll()

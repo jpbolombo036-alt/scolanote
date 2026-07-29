@@ -11,4 +11,7 @@ public interface ClassroomRepository extends JpaRepository<Classroom, Long> {
     List<Classroom> findByAcademicYearIdIn(List<Long> academicYearIds);
     Page<Classroom> findByAcademicYearIdIn(List<Long> academicYearIds, Pageable pageable);
     List<Classroom> findByActiveTrue();
+
+    @Query("SELECT COUNT(c) FROM Classroom c WHERE c.academicYear.school.id = :schoolId")
+    long countBySchoolId(@Param("schoolId") Long schoolId);
 }

@@ -43,6 +43,7 @@ public class TrimesterService {
     public TrimesterResponse createTrimester(TrimesterRequest request) {
         Trimester trimester = trimesterMapper.toEntity(request);
         trimester.setAcademicYear(findAcademicYear(request.getAcademicYearId()));
+        trimester.setSchoolId(requireSchoolId());
         Trimester saved = trimesterRepository.save(trimester);
         log.info("Trimestre créé: {}", saved.getId());
         return trimesterMapper.toResponse(saved);
@@ -64,12 +65,7 @@ public class TrimesterService {
                         return trimesterMapper.toResponse(trimester);
                     });
         }
-
-        List<Long> academicYearIds = academicYearRepository.findBySchoolId(requireSchoolId()).stream()
-                .map(com.bulletin.entity.AcademicYear::getId)
-                .toList();
-
-        return trimesterRepository.findByAcademicYearIdIn(academicYearIds, pageable)
+        return trimesterRepository.findBySchoolId(requireSchoolId(), pageable)
                 .map(trimester -> {
                     if (trimester.getAcademicYear() == null) {
                         return null;
@@ -91,12 +87,7 @@ public class TrimesterService {
                     .filter(java.util.Objects::nonNull)
                     .toList();
         }
-
-        List<Long> academicYearIds = academicYearRepository.findBySchoolId(requireSchoolId()).stream()
-                .map(com.bulletin.entity.AcademicYear::getId)
-                .toList();
-
-        return trimesterRepository.findByAcademicYearIdIn(academicYearIds).stream()
+        return trimesterRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(trimester -> {
                     if (trimester.getAcademicYear() == null) {
                         return null;
@@ -141,11 +132,7 @@ public class TrimesterService {
     public Trimester findById(Long id) {
         Trimester trimester = trimesterRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Trimestre non trouvé avec l'ID: " + id));
-        if (trimester.getAcademicYear() == null || trimester.getAcademicYear().getSchool() == null
-                || trimester.getAcademicYear().getSchool().getId() == null) {
-            throw new SecurityException("Accès refusé : trimestre sans année scolaire ou école associée");
-        }
-        securityUtils.assertSchoolAccess(trimester.getAcademicYear().getSchool().getId());
+        securityUtils.assertSchoolAccess(trimester.getSchoolId());
         return trimester;
     }
 

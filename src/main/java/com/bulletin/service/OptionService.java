@@ -8,6 +8,7 @@ import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.OptionMapper;
 import com.bulletin.repository.OptionRepository;
 import com.bulletin.repository.SectionRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,10 +24,24 @@ public class OptionService {
     private final OptionRepository optionRepository;
     private final SectionRepository sectionRepository;
     private final OptionMapper optionMapper;
+    private final SecurityUtils securityUtils;
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
 
     @Transactional
     public OptionResponse createOption(OptionRequest request) {
         Option option = optionMapper.toEntity(request);
+        option.setSchoolId(requireSchoolId());
         option.setSection(findSection(request.getSectionId()));
         Option saved = optionRepository.save(option);
         log.info("Option créée: {}", saved.getId());
@@ -39,8 +54,13 @@ public class OptionService {
     }
 
     @Transactional(readOnly = true)
-    public List<OptionResponse> getAllOptions() {
-        return optionRepository.findAll().stream()
+    public List<OptionResponse> getAccessibleOptions() {
+        if (isSuperAdmin()) {
+            return optionRepository.findAll().stream()
+                    .map(optionMapper::toResponse)
+                    .toList();
+        }
+        return optionRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(optionMapper::toResponse)
                 .toList();
     }
@@ -48,6 +68,11 @@ public class OptionService {
     @Transactional(readOnly = true)
     public List<OptionResponse> getOptionsBySection(Long sectionId) {
         return optionRepository.findBySectionId(sectionId).stream()
+                .filter(option -> {
+                    if (isSuperAdmin()) return true;
+                    Long schoolId = securityUtils.getCurrentSchoolId();
+                    return option.getSchoolId() == null || option.getSchoolId().equals(schoolId);
+                })
                 .map(optionMapper::toResponse)
                 .toList();
     }
@@ -71,8 +96,10 @@ public class OptionService {
     }
 
     public Option findById(Long id) {
-        return optionRepository.findById(id)
+        Option option = optionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Option non trouvée avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(option.getSchoolId());
+        return option;
     }
 
     private Section findSection(Long id) {

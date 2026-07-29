@@ -29,8 +29,8 @@ public class UserRoleController {
 
     @GetMapping
     @Operation(summary = "Liste des liens", description = "Retourne tous les liens user-rôle")
-    public ResponseEntity<List<UserRoleResponse>> getAllUserRoles() {
-        return ResponseEntity.ok(userRoleService.getAllUserRoles());
+    public ResponseEntity<List<UserRoleResponse>> getAccessibleUserRoles() {
+        return ResponseEntity.ok(userRoleService.getAccessibleUserRoles());
     }
 
     @DeleteMapping("/{id}")

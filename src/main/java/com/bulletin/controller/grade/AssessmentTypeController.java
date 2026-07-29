@@ -35,8 +35,8 @@ public class AssessmentTypeController {
 
     @GetMapping
     @Operation(summary = "Liste des types", description = "Retourne tous les types d'évaluation")
-    public ResponseEntity<List<AssessmentTypeResponse>> getAllAssessmentTypes() {
-        return ResponseEntity.ok(assessmentTypeService.getAllAssessmentTypes());
+    public ResponseEntity<List<AssessmentTypeResponse>> getAccessibleAssessmentTypes() {
+        return ResponseEntity.ok(assessmentTypeService.getAccessibleAssessmentTypes());
     }
 
     @PutMapping("/{id}")

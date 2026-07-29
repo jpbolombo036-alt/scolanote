@@ -35,8 +35,8 @@ public class OptionController {
 
     @GetMapping
     @Operation(summary = "Liste des options", description = "Retourne toutes les options")
-    public ResponseEntity<List<OptionResponse>> getAllOptions() {
-        return ResponseEntity.ok(optionService.getAllOptions());
+    public ResponseEntity<List<OptionResponse>> getAccessibleOptions() {
+        return ResponseEntity.ok(optionService.getAccessibleOptions());
     }
 
     @GetMapping("/section/{sectionId}")

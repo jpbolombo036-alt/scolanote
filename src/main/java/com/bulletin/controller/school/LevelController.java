@@ -35,8 +35,8 @@ public class LevelController {
 
     @GetMapping
     @Operation(summary = "Liste des niveaux", description = "Retourne tous les niveaux")
-    public ResponseEntity<List<LevelResponse>> getAllLevels() {
-        return ResponseEntity.ok(levelService.getAllLevels());
+    public ResponseEntity<List<LevelResponse>> getAccessibleLevels() {
+        return ResponseEntity.ok(levelService.getAccessibleLevels());
     }
 
     @PutMapping("/{id}")

@@ -13,4 +13,7 @@ public interface PeriodRepository extends JpaRepository<Period, Long> {
     Page<Period> findByTrimester_AcademicYearIdIn(List<Long> academicYearIds, Pageable pageable);
     List<Period> findByVerrouilleTrue();
     List<Period> findByVerrouilleFalse();
+    List<Period> findBySchoolId(Long schoolId);
+    Page<Period> findBySchoolId(Long schoolId, Pageable pageable);
+    long countBySchoolId(Long schoolId);
 }

@@ -42,14 +42,14 @@ public class SubjectController {
 
     @GetMapping
     @Operation(summary = "Liste des matières", description = "Retourne toutes les matières (avec pagination optionnelle)")
-    public ResponseEntity<Page<SubjectResponse>> getAllSubjects(Pageable pageable) {
-        return ResponseEntity.ok(subjectService.getAllSubjects(pageable));
+    public ResponseEntity<Page<SubjectResponse>> getAccessibleSubjects(Pageable pageable) {
+        return ResponseEntity.ok(subjectService.getAccessibleSubjects(pageable));
     }
 
     @GetMapping("/all")
     @Operation(summary = "Liste complète des matières")
     public ResponseEntity<List<SubjectResponse>> getAllSubjectsUnpaginated() {
-        return ResponseEntity.ok(subjectService.getAllSubjects());
+        return ResponseEntity.ok(subjectService.getAccessibleSubjects());
     }
 
     @PutMapping("/{id}")

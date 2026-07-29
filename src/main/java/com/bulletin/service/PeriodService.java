@@ -44,6 +44,7 @@ public class PeriodService {
     @Transactional
     public PeriodResponse createPeriod(PeriodRequest request) {
         Period period = periodMapper.toEntity(request);
+        period.setSchoolId(requireSchoolId());
         period.setTrimester(findTrimester(request.getTrimesterId()));
         Period saved = periodRepository.save(period);
         log.info("Période créée: {}", saved.getId());
@@ -66,12 +67,7 @@ public class PeriodService {
                         return periodMapper.toResponse(period);
                     });
         }
-
-        List<Long> academicYearIds = academicYearRepository.findBySchoolId(requireSchoolId()).stream()
-                .map(com.bulletin.entity.AcademicYear::getId)
-                .toList();
-
-        return periodRepository.findByTrimester_AcademicYearIdIn(academicYearIds, pageable)
+        return periodRepository.findBySchoolId(requireSchoolId(), pageable)
                 .map(period -> {
                     if (period.getTrimester() == null) {
                         return null;
@@ -93,12 +89,7 @@ public class PeriodService {
                     .filter(java.util.Objects::nonNull)
                     .toList();
         }
-
-        List<Long> academicYearIds = academicYearRepository.findBySchoolId(requireSchoolId()).stream()
-                .map(com.bulletin.entity.AcademicYear::getId)
-                .toList();
-
-        return periodRepository.findByTrimester_AcademicYearIdIn(academicYearIds).stream()
+        return periodRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(period -> {
                     if (period.getTrimester() == null) {
                         return null;
@@ -169,12 +160,7 @@ public class PeriodService {
     public Period findById(Long id) {
         Period period = periodRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Période non trouvée avec l'ID: " + id));
-        if (period.getTrimester() == null || period.getTrimester().getAcademicYear() == null
-                || period.getTrimester().getAcademicYear().getSchool() == null
-                || period.getTrimester().getAcademicYear().getSchool().getId() == null) {
-            throw new SecurityException("Accès refusé : période sans trimestre, année scolaire ou école associée");
-        }
-        securityUtils.assertSchoolAccess(period.getTrimester().getAcademicYear().getSchool().getId());
+        securityUtils.assertSchoolAccess(period.getSchoolId());
         return period;
     }
 

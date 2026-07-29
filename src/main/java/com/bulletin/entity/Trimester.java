@@ -43,6 +43,9 @@ public class Trimester {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @OneToMany(mappedBy = "trimester", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Period> periods;
 

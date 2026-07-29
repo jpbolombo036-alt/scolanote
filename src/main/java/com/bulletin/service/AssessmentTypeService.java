@@ -6,8 +6,11 @@ import com.bulletin.entity.AssessmentType;
 import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.AssessmentTypeMapper;
 import com.bulletin.repository.AssessmentTypeRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +23,24 @@ public class AssessmentTypeService {
 
     private final AssessmentTypeRepository assessmentTypeRepository;
     private final AssessmentTypeMapper assessmentTypeMapper;
+    private final SecurityUtils securityUtils;
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
 
     @Transactional
     public AssessmentTypeResponse createAssessmentType(AssessmentTypeRequest request) {
         AssessmentType assessmentType = assessmentTypeMapper.toEntity(request);
+        assessmentType.setSchoolId(requireSchoolId());
         AssessmentType saved = assessmentTypeRepository.save(assessmentType);
         log.info("Type d'évaluation créé: {}", saved.getId());
         return assessmentTypeMapper.toResponse(saved);
@@ -35,8 +52,23 @@ public class AssessmentTypeService {
     }
 
     @Transactional(readOnly = true)
-    public List<AssessmentTypeResponse> getAllAssessmentTypes() {
-        return assessmentTypeRepository.findAll().stream()
+    public Page<AssessmentTypeResponse> getAccessibleAssessmentTypes(Pageable pageable) {
+        if (isSuperAdmin()) {
+            return assessmentTypeRepository.findAll(pageable)
+                    .map(assessmentTypeMapper::toResponse);
+        }
+        return assessmentTypeRepository.findBySchoolId(requireSchoolId(), pageable)
+                .map(assessmentTypeMapper::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AssessmentTypeResponse> getAccessibleAssessmentTypes() {
+        if (isSuperAdmin()) {
+            return assessmentTypeRepository.findAll().stream()
+                    .map(assessmentTypeMapper::toResponse)
+                    .toList();
+        }
+        return assessmentTypeRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(assessmentTypeMapper::toResponse)
                 .toList();
     }
@@ -59,7 +91,9 @@ public class AssessmentTypeService {
     }
 
     public AssessmentType findById(Long id) {
-        return assessmentTypeRepository.findById(id)
+        AssessmentType assessmentType = assessmentTypeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Type d'évaluation non trouvé avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(assessmentType.getSchoolId());
+        return assessmentType;
     }
 }

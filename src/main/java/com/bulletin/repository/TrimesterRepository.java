@@ -10,4 +10,7 @@ public interface TrimesterRepository extends JpaRepository<Trimester, Long> {
     List<Trimester> findByAcademicYearId(Long academicYearId);
     List<Trimester> findByAcademicYearIdIn(List<Long> academicYearIds);
     Page<Trimester> findByAcademicYearIdIn(List<Long> academicYearIds, Pageable pageable);
+    List<Trimester> findBySchoolId(Long schoolId);
+    Page<Trimester> findBySchoolId(Long schoolId, Pageable pageable);
+    long countBySchoolId(Long schoolId);
 }

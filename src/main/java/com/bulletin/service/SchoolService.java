@@ -89,10 +89,13 @@ public class SchoolService {
             return Page.empty();
         }
 
-        return schoolRepository.findById(schoolId)
-                .map(schoolMapper::toResponse)
-                .map(school -> new org.springframework.data.domain.PageImpl<>(List.of(school), pageable, 1))
-                .orElseGet(Page::empty);
+        School school = schoolRepository.findById(schoolId).orElse(null);
+        if (school == null) {
+            return Page.empty();
+        }
+
+        SchoolResponse response = schoolMapper.toResponse(school);
+        return new org.springframework.data.domain.PageImpl<>(List.of(response), pageable, 1);
     }
 
     @Transactional(readOnly = true)

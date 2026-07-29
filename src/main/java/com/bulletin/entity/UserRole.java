@@ -30,6 +30,9 @@ public class UserRole {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

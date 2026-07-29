@@ -5,6 +5,7 @@ import com.bulletin.dto.school.LevelResponse;
 import com.bulletin.entity.Level;
 import com.bulletin.mapper.LevelMapper;
 import com.bulletin.repository.LevelRepository;
+import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,10 +20,24 @@ public class LevelService {
 
     private final LevelRepository levelRepository;
     private final LevelMapper levelMapper;
+    private final SecurityUtils securityUtils;
+
+    private boolean isSuperAdmin() {
+        return securityUtils.isSuperAdmin();
+    }
+
+    private Long requireSchoolId() {
+        Long schoolId = securityUtils.getCurrentSchoolId();
+        if (schoolId == null) {
+            throw new SecurityException("École non définie pour l'utilisateur connecté");
+        }
+        return schoolId;
+    }
 
     @Transactional
     public LevelResponse createLevel(LevelRequest request) {
         Level level = levelMapper.toEntity(request);
+        level.setSchoolId(requireSchoolId());
         Level saved = levelRepository.save(level);
         log.info("Niveau créé: {}", saved.getId());
         return levelMapper.toResponse(saved);
@@ -34,8 +49,13 @@ public class LevelService {
     }
 
     @Transactional(readOnly = true)
-    public List<LevelResponse> getAllLevels() {
-        return levelRepository.findAll().stream()
+    public List<LevelResponse> getAccessibleLevels() {
+        if (isSuperAdmin()) {
+            return levelRepository.findAll().stream()
+                    .map(levelMapper::toResponse)
+                    .toList();
+        }
+        return levelRepository.findBySchoolId(requireSchoolId()).stream()
                 .map(levelMapper::toResponse)
                 .toList();
     }
@@ -58,7 +78,9 @@ public class LevelService {
     }
 
     public Level findById(Long id) {
-        return levelRepository.findById(id)
+        Level level = levelRepository.findById(id)
                 .orElseThrow(() -> new com.bulletin.exception.ResourceNotFoundException("Niveau non trouvé avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(level.getSchoolId());
+        return level;
     }
 }

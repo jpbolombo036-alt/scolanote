@@ -29,6 +29,9 @@ public class Section {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Column(name = "school_id")
+    private Long schoolId;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

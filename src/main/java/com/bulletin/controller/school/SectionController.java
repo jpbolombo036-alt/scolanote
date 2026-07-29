@@ -35,8 +35,8 @@ public class SectionController {
 
     @GetMapping
     @Operation(summary = "Liste des sections", description = "Retourne toutes les sections")
-    public ResponseEntity<List<SectionResponse>> getAllSections() {
-        return ResponseEntity.ok(sectionService.getAllSections());
+    public ResponseEntity<List<SectionResponse>> getAccessibleSections() {
+        return ResponseEntity.ok(sectionService.getAccessibleSections());
     }
 
     @PutMapping("/{id}")

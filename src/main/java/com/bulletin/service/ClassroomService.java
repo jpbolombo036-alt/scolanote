@@ -108,6 +108,12 @@ public class ClassroomService {
 
     @Transactional(readOnly = true)
     public List<ClassroomResponse> getClassroomsByAcademicYear(Long academicYearId) {
+        AcademicYear academicYear = academicYearRepository.findById(academicYearId)
+                .orElseThrow(() -> new ResourceNotFoundException("Année scolaire non trouvée avec l'ID: " + academicYearId));
+        if (academicYear.getSchool() == null || academicYear.getSchool().getId() == null) {
+            return List.of();
+        }
+        securityUtils.assertSchoolAccess(academicYear.getSchool().getId());
         return classroomRepository.findByAcademicYearId(academicYearId).stream()
                 .filter(this::isClassroomValid)
                 .map(classroomMapper::toResponse)

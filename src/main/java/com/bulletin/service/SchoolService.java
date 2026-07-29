@@ -53,7 +53,7 @@ public class SchoolService {
                 .password(passwordEncoder.encode(adminPassword))
                 .enabled(true)
                 .schoolId(saved.getId())
-                .passwordResetRequired(true)
+                .passwordResetRequired(false)
                 .build();
         admin = userRepository.save(admin);
 

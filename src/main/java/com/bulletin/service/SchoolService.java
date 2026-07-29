@@ -89,16 +89,10 @@ public class SchoolService {
             return Page.empty();
         }
 
-        List<SchoolResponse> filtered = schoolRepository.findAll().stream()
-                .filter(school -> schoolId.equals(school.getId()))
+        return schoolRepository.findById(schoolId)
                 .map(schoolMapper::toResponse)
-                .toList();
-
-        int start = (int) pageable.getOffset();
-        int end = Math.min((start + pageable.getPageSize()), filtered.size());
-        List<SchoolResponse> pageContent = start > end ? List.of() : filtered.subList(start, end);
-
-        return new org.springframework.data.domain.PageImpl<>(pageContent, pageable, filtered.size());
+                .map(school -> new org.springframework.data.domain.PageImpl<>(List.of(school), pageable, 1))
+                .orElseGet(Page::empty);
     }
 
     @Transactional(readOnly = true)
@@ -114,10 +108,10 @@ public class SchoolService {
             return List.of();
         }
 
-        return schoolRepository.findAll().stream()
-                .filter(school -> schoolId.equals(school.getId()))
+        return schoolRepository.findById(schoolId)
                 .map(schoolMapper::toResponse)
-                .toList();
+                .map(List::of)
+                .orElseGet(List::of);
     }
 
     private boolean isSuperAdmin() {

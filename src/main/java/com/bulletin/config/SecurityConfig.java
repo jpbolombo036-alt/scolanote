@@ -91,11 +91,12 @@ public class SecurityConfig {
                             "/auth/reinitialiser-mot-de-passe",
                             "/auth/init-admin"
                     ).permitAll();
-                    auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll();
                     if (localProfile) {
+                        auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll();
                         auth.requestMatchers("/h2-console/**").permitAll();
                         auth.requestMatchers("/debug/**").permitAll();
                     } else {
+                        auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").denyAll();
                         auth.requestMatchers("/debug/**").authenticated();
                     }
                     auth.anyRequest().authenticated();
@@ -113,7 +114,12 @@ public class SecurityConfig {
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
                 .collect(Collectors.toList());
+
+        boolean localProfile = environment.acceptsProfiles(Profiles.of("local"));
         if (origins.isEmpty() || origins.contains("*")) {
+            if (!localProfile) {
+                throw new IllegalStateException("CORS_ALLOWED_ORIGINS must be explicitly configured in production");
+            }
             configuration.addAllowedOriginPattern("*");
         } else {
             configuration.setAllowedOrigins(origins);

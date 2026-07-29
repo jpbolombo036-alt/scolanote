@@ -313,6 +313,9 @@ public class AuthController {
     @Operation(summary = "Demande de réinitialisation", description = "Envoie un email de réinitialisation de mot de passe")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody PasswordResetRequest request) {
         userRepository.findByUsername(request.getEmail()).ifPresent(user -> {
+            if (!user.isEnabled()) {
+                return;
+            }
             String resetToken = jwtTokenProvider.generateResetToken(user.getUsername());
             emailService.sendPasswordResetEmail(user.getUsername(), user.getUsername(), resetToken);
         });
@@ -341,14 +344,9 @@ public class AuthController {
     }
 
     @PostMapping("/activer-utilisateur")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @Operation(summary = "Activer un utilisateur", description = "Active un utilisateur par son username (réservé aux admins)")
     public ResponseEntity<String> activateUser(@RequestParam String username) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !hasAdminRole(authentication)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Accès refusé : droits administrateur requis");
-        }
-
         User user = userRepository.findByUsername(username)
                 .orElse(null);
 
@@ -365,6 +363,6 @@ public class AuthController {
 
     private boolean hasAdminRole(Authentication authentication) {
         return authentication.getAuthorities().stream()
-                .anyMatch(auth -> "ROLE_admin".equals(auth.getAuthority()) || "ROLE_ADMIN".equals(auth.getAuthority()));
+                .anyMatch(auth -> "ROLE_ADMIN".equals(auth.getAuthority()) || "ROLE_SUPER_ADMIN".equals(auth.getAuthority()));
     }
 }

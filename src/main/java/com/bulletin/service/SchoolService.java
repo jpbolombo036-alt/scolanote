@@ -57,11 +57,11 @@ public class SchoolService {
                 .build();
         admin = userRepository.save(admin);
 
-        Role superAdminRole = roleRepository.findByNom("SUPER_ADMIN")
-                .orElseThrow(() -> new ResourceNotFoundException("Rôle SUPER_ADMIN non trouvé"));
+        Role adminRole = roleRepository.findByNom("ADMIN")
+                .orElseThrow(() -> new ResourceNotFoundException("Rôle ADMIN non trouvé"));
         userRoleRepository.save(UserRole.builder()
                 .user(admin)
-                .role(superAdminRole)
+                .role(adminRole)
                 .build());
 
         log.info("Admin automatique créé pour l'école {}: {}", saved.getId(), adminUsername);

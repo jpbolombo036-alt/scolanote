@@ -312,12 +312,12 @@ public class AuthController {
     @PostMapping("/mot-de-passe-oublie")
     @Operation(summary = "Demande de réinitialisation", description = "Envoie un email de réinitialisation de mot de passe")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody PasswordResetRequest request) {
-        userRepository.findByUsername(request.getEmail()).ifPresent(user -> {
+        userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
             if (!user.isEnabled()) {
                 return;
             }
             String resetToken = jwtTokenProvider.generateResetToken(user.getUsername());
-            emailService.sendPasswordResetEmail(user.getUsername(), user.getUsername(), resetToken);
+            emailService.sendPasswordResetEmail(user.getEmail(), user.getUsername(), resetToken);
         });
 
         return ResponseEntity.ok("Si ce compte existe, un lien de réinitialisation a été envoyé");

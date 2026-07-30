@@ -1,4 +1,4 @@
-﻿package com.bulletin.entity;
+package com.bulletin.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

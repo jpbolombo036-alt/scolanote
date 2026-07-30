@@ -1,4 +1,4 @@
-package com.bulletin.entity;
+﻿package com.bulletin.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -30,6 +30,9 @@ public class Level {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+        @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id", insertable = false, updatable = false)
+    private School school;
 
     @Column(name = "school_id")
     private Long schoolId;
@@ -45,3 +48,7 @@ public class Level {
         updatedAt = LocalDateTime.now();
     }
 }
+
+
+
+

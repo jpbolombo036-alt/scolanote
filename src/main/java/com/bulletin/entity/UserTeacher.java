@@ -1,4 +1,4 @@
-package com.bulletin.entity;
+﻿package com.bulletin.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -29,6 +29,9 @@ public class UserTeacher {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+        @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id", insertable = false, updatable = false)
+    private School school;
 
     @Column(name = "school_id")
     private Long schoolId;
@@ -47,3 +50,7 @@ public class UserTeacher {
         updatedAt = LocalDateTime.now();
     }
 }
+
+
+
+

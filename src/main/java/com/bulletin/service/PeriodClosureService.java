@@ -41,6 +41,8 @@ public class PeriodClosureService {
         Period periode = periodRepository.findById(periodeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Période non trouvée"));
 
+        securityUtils.assertSchoolAccess(periode.getSchoolId());
+
         if (periode.isVerrouille()) {
             throw new IllegalStateException("Période déjà verrouillée le " + periode.getDateVerrouillage());
         }
@@ -58,6 +60,8 @@ public class PeriodClosureService {
         Period periode = periodRepository.findById(periodeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Période non trouvée"));
 
+        securityUtils.assertSchoolAccess(periode.getSchoolId());
+
         if (!periode.isVerrouille()) {
             throw new IllegalStateException("Période non verrouillée");
         }
@@ -74,6 +78,8 @@ public class PeriodClosureService {
         Period periode = periodRepository.findById(periodeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Période non trouvée"));
 
+        securityUtils.assertSchoolAccess(periode.getSchoolId());
+
         if (periode.isVerrouille() && !securityUtils.isDirection()) {
             throw new IllegalStateException("Période verrouillée. Seul la direction peut modifier.");
         }
@@ -82,6 +88,8 @@ public class PeriodClosureService {
     public PeriodValidationResponse validatePeriodCanBeLocked(Long periodeId) {
         Period periode = periodRepository.findById(periodeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Période non trouvée avec l'ID: " + periodeId));
+
+        securityUtils.assertSchoolAccess(periode.getSchoolId());
 
         if (periode.isVerrouille()) {
             return PeriodValidationResponse.builder()

@@ -29,10 +29,10 @@ spring:
     locations: classpath:db/migration
 
   mail:
-    host: ${SMTP_HOST}
+    host: ${SMTP_HOST:smtp.gmail.com}
     port: ${SMTP_PORT:587}
-    username: ${SMTP_USERNAME}
-    password: ${SMTP_PASSWORD}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -68,7 +68,7 @@ app:
     admin-init-key: ${ADMIN_INIT_KEY}
 
   frontend:
-    url: ${FRONTEND_URL}
+    url: ${FRONTEND_URL:http://localhost:3000}
 
   bulletin:
     mention:

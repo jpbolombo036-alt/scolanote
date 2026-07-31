@@ -3,6 +3,8 @@
 
 set -e
 
+echo "=== Bulletin Gestion - demarrage ==="
+
 # Parse DATABASE_URL if available
 if [ -n "$DATABASE_URL" ]; then
   # Extract host and port from DATABASE_URL (format: postgres://user:pass@host:port/db)
@@ -13,13 +15,28 @@ fi
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
 
-echo "Waiting for PostgreSQL at $DB_HOST:$DB_PORT..."
+echo "DATABASE_URL defini: $([ -n "$DATABASE_URL" ] && echo oui || echo NON)"
+echo "Attente de PostgreSQL a $DB_HOST:$DB_PORT (max 60s)..."
 
-while ! nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null; do
+# Attente bornee : au pire l'app demarre et Flyway/Hikari retenteront
+TRIES=0
+MAX_TRIES=60
+until nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null; do
+  TRIES=$((TRIES + 1))
+  if [ "$TRIES" -ge "$MAX_TRIES" ]; then
+    echo "ATTENTION: PostgreSQL injoignable apres ${MAX_TRIES}s a $DB_HOST:$DB_PORT."
+    echo "Demarrage quand meme (Hikari/Flyway retenteront la connexion)."
+    break
+  fi
   sleep 1
 done
 
-echo "PostgreSQL is ready. Starting application (profile: ${SPRING_PROFILES_ACTIVE:-prod})..."
+[ "$TRIES" -lt "$MAX_TRIES" ] && echo "PostgreSQL est pret."
+
+echo "PORT=${PORT:-8000} | PROFILE=${SPRING_PROFILES_ACTIVE:-prod}"
+echo "JWT_SECRET defini: $([ -n "$JWT_SECRET" ] && echo oui || echo NON)"
+echo "SMTP_HOST defini: $([ -n "$SMTP_HOST" ] && echo oui || echo NON)"
+echo "Demarrage de l'application..."
 
 exec java \
   -Dserver.port="${PORT:-8000}" \

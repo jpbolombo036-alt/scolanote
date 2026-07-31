@@ -1,9 +1,9 @@
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/bulletindb}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:bulletindb}}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS:org.postgresql.Driver}
-    username: ${SPRING_DATASOURCE_USERNAME:user}
-    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    username: ${SPRING_DATASOURCE_USERNAME:${PGUSER:user}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${PGPASSWORD:password}}
 
   jpa:
     hibernate:

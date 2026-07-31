@@ -4,20 +4,18 @@ import com.bulletin.dto.bulletin.ReportCardDetailResponse;
 import com.bulletin.entity.ReportCard;
 import com.bulletin.repository.ReportCardDetailRepository;
 import com.bulletin.repository.ReportCardRepository;
+import com.bulletin.service.storage.FileStorageService;
 import com.lowagie.text.*;
 import com.lowagie.text.Font;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
 
@@ -28,9 +26,7 @@ public class BulletinPdfService {
 
     private final ReportCardRepository reportCardRepository;
     private final ReportCardDetailRepository reportCardDetailRepository;
-
-    @Value("${app.upload.dir:/tmp/uploads}")
-    private String uploadDir;
+    private final FileStorageService fileStorageService;
 
     @Transactional(readOnly = true)
     public String generatePdf(Long reportCardId) {
@@ -59,12 +55,10 @@ public class BulletinPdfService {
                 .toList();
 
         try {
-            Path dir = Path.of(uploadDir, "bulletins");
-            Files.createDirectories(dir);
-            Path file = dir.resolve("bulletin-" + reportCardId + ".pdf");
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
             Document document = new Document(PageSize.A4, 20, 20, 20, 20);
-            PdfWriter.getInstance(document, new FileOutputStream(file.toFile()));
+            PdfWriter.getInstance(document, buffer);
             document.open();
 
             addHeader(document, reportCard);
@@ -76,20 +70,27 @@ public class BulletinPdfService {
 
             document.close();
 
-            String relativePath = "uploads/bulletins/bulletin-" + reportCardId + ".pdf";
-            reportCard.setPdfUrl(relativePath);
+            // Persistance : S3 si configuré (recommandé sur Railway), sinon filesystem local
+            String reference = fileStorageService.save(reportCardId, buffer.toByteArray());
+            reportCard.setPdfUrl(reference);
             reportCardRepository.save(reportCard);
 
-            log.info("PDF généré: {}", file.toAbsolutePath());
-            return file.toAbsolutePath().toString();
+            log.info("PDF généré pour le bulletin {}: {}", reportCardId, reference);
+            return reference;
         } catch (Exception e) {
             log.error("Erreur lors de la génération du PDF", e);
             throw new RuntimeException("Échec de la génération du PDF", e);
         }
     }
 
-    public Path getPdfPath(Long reportCardId) {
-        return Path.of(uploadDir, "bulletins", "bulletin-" + reportCardId + ".pdf");
+    /** Indique si le PDF existe déjà dans le stockage (S3 ou local). */
+    public boolean pdfExists(Long reportCardId) {
+        return fileStorageService.exists(reportCardId);
+    }
+
+    /** Charge le contenu binaire du PDF (depuis S3 ou le filesystem local). */
+    public byte[] loadPdf(Long reportCardId) throws IOException {
+        return fileStorageService.load(reportCardId);
     }
 
     private void addHeader(Document document, ReportCard reportCard) throws Exception {

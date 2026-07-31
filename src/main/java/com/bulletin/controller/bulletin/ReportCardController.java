@@ -67,12 +67,13 @@ public class ReportCardController {
     @Operation(summary = "Générer le PDF", description = "Génère le PDF du bulletin et le retourne en téléchargement")
     public ResponseEntity<byte[]> generatePdf(@PathVariable Long id) {
         try {
-            java.nio.file.Path pdfPath = bulletinPdfService.getPdfPath(id);
-            if (!java.nio.file.Files.exists(pdfPath)) {
+            // Régénère le PDF si absent du stockage (S3 ou local).
+            // Sur Railway le filesystem local est éphémère : si S3 n'est pas configuré,
+            // le PDF est simplement régénéré à la demande.
+            if (!bulletinPdfService.pdfExists(id)) {
                 bulletinPdfService.generatePdf(id);
-                pdfPath = bulletinPdfService.getPdfPath(id);
             }
-            byte[] pdfBytes = java.nio.file.Files.readAllBytes(pdfPath);
+            byte[] pdfBytes = bulletinPdfService.loadPdf(id);
             String filename = "bulletin-" + id + ".pdf";
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.setContentType(org.springframework.http.MediaType.APPLICATION_PDF);

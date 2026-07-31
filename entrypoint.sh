@@ -19,10 +19,11 @@ while ! nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null; do
   sleep 1
 done
 
-echo "PostgreSQL is ready. Starting application..."
+echo "PostgreSQL is ready. Starting application (profile: ${SPRING_PROFILES_ACTIVE:-prod})..."
 
 exec java \
   -Dserver.port="${PORT:-8000}" \
+  -Dspring.profiles.active="${SPRING_PROFILES_ACTIVE:-prod}" \
   -Xmx512m \
   -Xms256m \
   -XX:+UseContainerSupport \

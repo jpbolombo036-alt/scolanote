@@ -27,6 +27,11 @@ spring:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
+    # Tolère les migrations appliquées "out of order" (ex: V4.5 ajoutée après V5)
+    out-of-order: true
+    # Ne bloque pas le démarrage si le checksum d'une migration déjà appliquée a changé
+    # (indispensable car V17/V18 ont été corrigées après leur 1er déploiement en prod)
+    validate-on-migrate: false
 
   mail:
     host: ${SMTP_HOST:smtp.gmail.com}

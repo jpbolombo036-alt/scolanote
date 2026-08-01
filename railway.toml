@@ -5,6 +5,8 @@ dockerfilePath = "./Dockerfile"
 [deploy]
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
-healthcheckPath = "/auth/status"
-healthcheckTimeout = 180
-healthcheckInterval = 10
+# /health est l'endpoint le plus leger (repond des que Tomcat est up)
+healthcheckPath = "/health"
+# Timeout genereux : le 1er demarrage execute 20 migrations Flyway sur une DB distante
+healthcheckTimeout = 300
+healthcheckInterval = 15

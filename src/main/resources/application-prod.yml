@@ -60,7 +60,10 @@ server:
 
 app:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+    # Origines autorisées (séparées par des virgules). Les patterns wildcard sont supportés
+    # (ex: https://scolanote-*.vercel.app pour les previews Vercel).
+    # Défaut: frontend Vercel + localhost dev. Surchargé par CORS_ALLOWED_ORIGINS dans Railway.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://scolanote.vercel.app,https://scolanote-frontend.vercel.app,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173}
 
   jwt:
     secret: ${JWT_SECRET}

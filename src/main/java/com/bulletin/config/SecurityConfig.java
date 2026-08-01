@@ -126,7 +126,10 @@ public class SecurityConfig {
                 configuration.addAllowedOriginPattern("*");
             }
         } else {
-            configuration.setAllowedOrigins(origins);
+            // Utilise des patterns pour supporter les URLs exactes ET les wildcard de sous-domaines
+            // (ex: https://scolanote.vercel.app et https://scolanote-*.vercel.app pour les previews Vercel)
+            configuration.setAllowedOriginPatterns(origins);
+            log.info("CORS configured with allowed origin patterns: {}", origins);
         }
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));

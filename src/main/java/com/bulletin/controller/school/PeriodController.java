@@ -2,9 +2,7 @@ package com.bulletin.controller.school;
 
 import com.bulletin.dto.school.PeriodRequest;
 import com.bulletin.dto.school.PeriodResponse;
-import com.bulletin.dto.school.PeriodValidationResponse;
 import com.bulletin.security.SecurityUtils;
-import com.bulletin.service.PeriodClosureService;
 import com.bulletin.service.PeriodService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,7 +22,6 @@ import java.util.List;
 @Tag(name = "Périodes", description = "Gestion des périodes")
 public class PeriodController {
     private final PeriodService periodService;
-    private final PeriodClosureService periodClosureService;
     private final SecurityUtils securityUtils;
 
     @PostMapping
@@ -72,11 +69,8 @@ public class PeriodController {
         return ResponseEntity.ok(periodService.getOuvertes());
     }
 
-    @GetMapping("/{id}/valider")
-    @Operation(summary = "Valider qu'une période peut être verrouillée")
-    public ResponseEntity<PeriodValidationResponse> validateClosure(@PathVariable Long id) {
-        return ResponseEntity.ok(periodClosureService.validatePeriodCanBeLocked(id));
-    }
+    // NOTE: GET /{id}/valider est géré par PeriodClosureController (responsabilité clôture).
+    // L'endpoint en double ici causait un "Ambiguous mapping" qui empêchait le démarrage.
 
     @PutMapping("/{id}")
     @Operation(summary = "Modifier une période")

@@ -3,8 +3,11 @@ package com.bulletin.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
-
+/**
+ * Journal des tentatives d'authentification.
+ * Hérite de BaseEntity : created_at est géré automatiquement (horodatage du log),
+ * deleted_at/updated_at existent en base (migration V21).
+ */
 @Entity
 @Table(name = "auth_logs")
 @Getter
@@ -27,7 +30,4 @@ public class AuthLog extends BaseEntity {
 
     @Column(name = "user_agent", length = 500)
     private String userAgent;
-
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
 }

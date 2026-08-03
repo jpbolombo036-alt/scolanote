@@ -17,7 +17,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
@@ -82,13 +81,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private void saveAuthLog(HttpServletRequest request, String username, boolean success, String errorReason) {
         try {
+            // createdAt est géré automatiquement par BaseEntity (@PrePersist)
             AuthLog logEntry = AuthLog.builder()
                     .username(username)
                     .success(success)
                     .errorReason(errorReason)
                     .ipAddress(getClientIP(request))
                     .userAgent(request.getHeader("User-Agent"))
-                    .createdAt(LocalDateTime.now())
                     .build();
             authLogRepository.save(logEntry);
         } catch (Exception ex) {

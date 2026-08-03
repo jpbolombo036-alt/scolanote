@@ -229,12 +229,15 @@ public class ReportCardService {
         return reportCard;
     }
 
+    /**
+     * Résout la mention (libellé français) selon les seuils configurés.
+     * Source de vérité unique : l'enum Mention (système congolais).
+     * Le libellé est stocké tel quel en BDD, donc aucun mapping supplémentaire à l'affichage.
+     */
     private String resolveMention(BigDecimal pourcentage) {
-        if (pourcentage.compareTo(mentionExcellent) >= 0) return "Très Bien";
-        if (pourcentage.compareTo(mentionTresBien) >= 0) return "Bien";
-        if (pourcentage.compareTo(mentionBien) >= 0) return "Assez Bien";
-        if (pourcentage.compareTo(mentionSatisfaction) >= 0) return "Passable";
-        return "Insuffisant";
+        return com.bulletin.entity.enums.Mention.from(
+                pourcentage, mentionExcellent, mentionTresBien, mentionBien, mentionSatisfaction
+        ).getLibelle();
     }
 
     private ReportCardResponse toResponse(ReportCard reportCard) {
@@ -259,7 +262,8 @@ public class ReportCardService {
             response.setElevePrenom(student.getPrenom());
             response.setEleveNom(student.getNom());
         }
-        response.setMention(mapMentionToFrench(reportCard.getMention()));
+        // La mention est déjà stockée en libellé français en BDD (enum Mention) : pas de mapping.
+        response.setMention(reportCard.getMention());
         List<ReportCardDetailResponse> details = reportCardDetailRepository.findByReportCardId(reportCard.getId()).stream()
                 .map(d -> ReportCardDetailResponse.builder()
                         .id(d.getId())
@@ -282,18 +286,6 @@ public class ReportCardService {
                 .toList();
         response.setDetails(details);
         return response;
-    }
-
-    private String mapMentionToFrench(String mention) {
-        if (mention == null) return null;
-        return switch (mention) {
-            case "EXCELLENT" -> "Très Bien";
-            case "TRES BIEN" -> "Bien";
-            case "BIEN" -> "Assez Bien";
-            case "SATISFACTION" -> "Passable";
-            case "ECHEC" -> "Insuffisant";
-            default -> mention;
-        };
     }
 
     /**

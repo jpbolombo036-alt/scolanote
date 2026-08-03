@@ -53,7 +53,7 @@ public class ReportCardWorkflowService {
 
     @Transactional
     public ReportCardWorkflowResponse sign(Long reportCardId, ReportCardActionRequest request) {
-        assertDirecteur();
+        assertCanSign();
         ReportCard reportCard = findById(reportCardId);
         if (!ReportCard.Statut.VALIDE_DIRECTEUR.name().equals(reportCard.getStatut())) {
             throw new IllegalStateException("Seuls les bulletins validés par le directeur peuvent être signés");
@@ -82,27 +82,46 @@ public class ReportCardWorkflowService {
         return toWorkflowResponse(reportCard);
     }
 
+    /**
+     * Validation par le préfet : permission BULLETIN_VALIDER_PREFET.
+     * Rétrocompatible : accordée aussi à la direction (qui a toutes les permissions).
+     */
     private void assertPrefetOrDirection() {
-        if (securityUtils.isDirection()) {
+        if (securityUtils.hasPermission("BULLETIN_VALIDER_PREFET") || securityUtils.isDirection()) {
             return;
         }
-        if (securityUtils.hasRole("PREFET")) {
-            return;
-        }
-        throw new SecurityException("Accès refusé : réservé au préfet ou à la direction");
+        throw new SecurityException("Accès refusé : permission BULLETIN_VALIDER_PREFET requise (préfet ou direction)");
     }
 
+    /**
+     * Validation par le directeur : permission BULLETIN_VALIDER_DIRECTEUR.
+     */
     private void assertDirecteur() {
-        if (securityUtils.hasRole("DIRECTEUR") || securityUtils.isAdmin()) {
+        if (securityUtils.hasPermission("BULLETIN_VALIDER_DIRECTEUR")
+                || securityUtils.hasRole("DIRECTEUR") || securityUtils.isAdmin()) {
             return;
         }
-        throw new SecurityException("Accès refusé : réservé au directeur");
+        throw new SecurityException("Accès refusé : permission BULLETIN_VALIDER_DIRECTEUR requise (directeur)");
     }
 
+    /**
+     * Publication : permission BULLETIN_PUBLIER.
+     */
     private void assertDirection() {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : réservé à la direction");
+        if (!securityUtils.hasPermission("BULLETIN_PUBLIER") && !securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : permission BULLETIN_PUBLIER requise (direction)");
         }
+    }
+
+    /**
+     * Signature : permission BULLETIN_SIGNER (directeur).
+     */
+    private void assertCanSign() {
+        if (securityUtils.hasPermission("BULLETIN_SIGNER")
+                || securityUtils.hasRole("DIRECTEUR") || securityUtils.isAdmin()) {
+            return;
+        }
+        throw new SecurityException("Accès refusé : permission BULLETIN_SIGNER requise (directeur)");
     }
 
     private ReportCard findById(Long id) {

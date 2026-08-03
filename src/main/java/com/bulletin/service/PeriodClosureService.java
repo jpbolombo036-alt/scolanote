@@ -36,6 +36,7 @@ public class PeriodClosureService {
 
     @Transactional
     public void verrouillerPeriode(Long periodeId) {
+        assertCanLockPeriod();
         validatePeriodCanBeLocked(periodeId);
 
         Period periode = periodRepository.findById(periodeId)
@@ -57,6 +58,7 @@ public class PeriodClosureService {
 
     @Transactional
     public void deverrouillerPeriode(Long periodeId) {
+        assertCanLockPeriod();
         Period periode = periodRepository.findById(periodeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Période non trouvée"));
 
@@ -72,6 +74,16 @@ public class PeriodClosureService {
         periodRepository.save(periode);
 
         log.info("Période déverrouillée: {}", periodeId);
+    }
+
+    /**
+     * Vérifie la permission PERIODE_VERROUILLER (verrouiller/déverrouiller une période).
+     * Rétrocompatible : accordée aussi à la direction.
+     */
+    private void assertCanLockPeriod() {
+        if (!securityUtils.hasPermission("PERIODE_VERROUILLER") && !securityUtils.isDirection()) {
+            throw new SecurityException("Accès refusé : permission PERIODE_VERROUILLER requise (direction)");
+        }
     }
 
     public void assertPeriodeOuverte(Long periodeId) {

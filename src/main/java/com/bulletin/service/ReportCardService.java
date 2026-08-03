@@ -332,7 +332,8 @@ public class ReportCardService {
     }
 
     private void assertCanGenerateBulletins(Classroom classroom) {
-        if (securityUtils.isDirection()) {
+        // Permission granulaire BULLETIN_GENERER (ou direction, rétrocompatible)
+        if (securityUtils.hasPermission("BULLETIN_GENERER") || securityUtils.isDirection()) {
             return;
         }
         Long currentUserId = securityUtils.getCurrentUserId();

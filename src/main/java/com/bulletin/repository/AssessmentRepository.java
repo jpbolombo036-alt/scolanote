@@ -50,4 +50,21 @@ public interface AssessmentRepository extends JpaRepository<Assessment, Long> {
               AND a.period IS NOT NULL
             """)
     List<Assessment> findCompleteBySchoolId(@Param("schoolId") Long schoolId);
+
+    /**
+     * Charge en une seule requête toutes les évaluations d'une classe pour une période,
+     * avec le type d'évaluation (pour le coefficient) et l'affectation (pour la matière).
+     * Utilisé par le calcul batch des bulletins (évite le N+1).
+     */
+    @Query("""
+            SELECT a FROM Assessment a
+            LEFT JOIN FETCH a.assessmentType
+            LEFT JOIN FETCH a.assignment asn
+            LEFT JOIN FETCH asn.subject
+            WHERE asn.classroom.id = :classroomId
+              AND a.period.id = :periodId
+            """)
+    List<Assessment> findByClassroomIdAndPeriodIdWithDetails(
+            @Param("classroomId") Long classroomId,
+            @Param("periodId") Long periodId);
 }

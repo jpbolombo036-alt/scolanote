@@ -73,10 +73,16 @@ public class ReportCardService {
 
         List<Enrollment> enrollments = enrollmentRepository.findByClassroomId(classroom.getId());
 
+        // ===== CALCUL BATCH (anti N+1) : charge tout en 4 requêtes puis calcule en mémoire =====
+        Map<Long, List<SubjectResult>> resultsByEnrollment =
+                calculator.computeClassSubjectResults(classroom, period, enrollments);
+
+        // Pourcentage global par élève (en mémoire)
         Map<Long, BigDecimal> percentagesByEnrollment = enrollments.stream()
                 .collect(Collectors.toMap(
                         Enrollment::getId,
-                        e -> calculator.computeGlobalResult(calculator.computeSubjectResults(e, period)).getPourcentage()
+                        e -> calculator.computeGlobalResult(
+                                resultsByEnrollment.getOrDefault(e.getId(), List.of())).getPourcentage()
                 ));
 
         List<Long> ranking = percentagesByEnrollment.entrySet().stream()
@@ -84,11 +90,15 @@ public class ReportCardService {
                 .map(Map.Entry::getKey)
                 .toList();
 
+        // Rangs par matière (calculés en mémoire, sans requêtes supplémentaires)
+        Map<Long, Map<Long, Integer>> subjectRanksByEnrollment = computeSubjectRanks(enrollments, resultsByEnrollment);
+
         List<ReportCardResponse> responses = new java.util.ArrayList<>();
 
         for (Enrollment enrollment : enrollments) {
-            List<SubjectResult> subjectResults = calculator.computeSubjectResults(enrollment, period);
+            List<SubjectResult> subjectResults = resultsByEnrollment.getOrDefault(enrollment.getId(), List.of());
             BulletinCalculatorService.GlobalResult global = calculator.computeGlobalResult(subjectResults);
+            Map<Long, Integer> subjectRanks = subjectRanksByEnrollment.getOrDefault(enrollment.getId(), Map.of());
 
             int rang = ranking.indexOf(enrollment.getId()) + 1;
             String mention = resolveMention(global.getPourcentage());
@@ -102,29 +112,6 @@ public class ReportCardService {
                         rc.setDeletedAt(java.time.LocalDateTime.now());
                         reportCardRepository.save(rc);
                     });
-
-            Map<Long, Integer> subjectRanks = new HashMap<>();
-            for (TeachingAssignment assignment : teachingAssignmentRepository.findByClassroomId(classroom.getId())) {
-                Subject subject = assignment.getSubject();
-                List<Enrollment> classEnrollments = enrollmentRepository.findByClassroomId(classroom.getId());
-                List<BigDecimal> averages = classEnrollments.stream()
-                        .map(e -> calculator.computeSubjectResults(e, period).stream()
-                                .filter(sr -> sr.getSubject().getId().equals(subject.getId()))
-                                .findFirst()
-                                .map(SubjectResult::getMoyenne)
-                                .orElse(BigDecimal.ZERO)
-                        )
-                        .sorted(Comparator.reverseOrder())
-                        .toList();
-
-                BigDecimal studentAvg = subjectResults.stream()
-                        .filter(sr -> sr.getSubject().getId().equals(subject.getId()))
-                        .findFirst()
-                        .map(SubjectResult::getMoyenne)
-                        .orElse(BigDecimal.ZERO);
-
-                subjectRanks.put(subject.getId(), averages.indexOf(studentAvg) + 1);
-            }
 
             Map<Long, String> appreciations = new HashMap<>();
             for (TeachingAssignment assignment : teachingAssignmentRepository.findByClassroomId(classroom.getId())) {
@@ -307,6 +294,49 @@ public class ReportCardService {
             case "ECHEC" -> "Insuffisant";
             default -> mention;
         };
+    }
+
+    /**
+     * Calcule les rangs par matière pour chaque élève, EN MÉMOIRE (aucune requête).
+     *
+     * Pour chaque matière, on trie les moyennes de tous les élèves (ordre décroissant),
+     * puis on détermine la position de chaque élève.
+     *
+     * @return map enrollmentId -> (subjectId -> rang)
+     */
+    private Map<Long, Map<Long, Integer>> computeSubjectRanks(
+            List<Enrollment> enrollments,
+            Map<Long, List<SubjectResult>> resultsByEnrollment) {
+
+        // subjectId -> liste triée (desc) des moyennes de la classe
+        Map<Long, List<BigDecimal>> averagesBySubject = new HashMap<>();
+        for (List<SubjectResult> results : resultsByEnrollment.values()) {
+            for (SubjectResult sr : results) {
+                if (sr.getSubject() == null || sr.getMoyenne() == null) {
+                    continue;
+                }
+                averagesBySubject.computeIfAbsent(sr.getSubject().getId(), k -> new java.util.ArrayList<>())
+                        .add(sr.getMoyenne());
+            }
+        }
+        averagesBySubject.values().forEach(list -> list.sort(Comparator.reverseOrder()));
+
+        // enrollmentId -> (subjectId -> rang)
+        Map<Long, Map<Long, Integer>> ranksByEnrollment = new HashMap<>();
+        for (Enrollment enrollment : enrollments) {
+            Map<Long, Integer> ranks = new HashMap<>();
+            List<SubjectResult> results = resultsByEnrollment.getOrDefault(enrollment.getId(), List.of());
+            for (SubjectResult sr : results) {
+                if (sr.getSubject() == null || sr.getMoyenne() == null) {
+                    continue;
+                }
+                List<BigDecimal> averages = averagesBySubject.getOrDefault(sr.getSubject().getId(), List.of());
+                int rang = averages.indexOf(sr.getMoyenne()) + 1;
+                ranks.put(sr.getSubject().getId(), rang > 0 ? rang : null);
+            }
+            ranksByEnrollment.put(enrollment.getId(), ranks);
+        }
+        return ranksByEnrollment;
     }
 
     private void assertCanGenerateBulletins(Classroom classroom) {

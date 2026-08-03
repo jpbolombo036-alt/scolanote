@@ -10,7 +10,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -111,6 +114,115 @@ public class BulletinCalculatorService {
                 : BigDecimal.ZERO;
 
         return new GlobalResult(totalPoints, maximumPoints, pourcentage);
+    }
+
+    /**
+     * VERSION BATCH (anti N+1) : calcule les résultats par matière pour TOUTE une classe
+     * en quelques requêtes seulement, puis effectue les calculs en mémoire.
+     *
+     * Au lieu de ~51 requêtes par élève (boucles imbriquées), on charge :
+     *   1. les affectations (+ matières) de la classe
+     *   2. les évaluations (+ types) de la classe pour la période
+     *   3. toutes les notes de la classe pour la période
+     *   4. les coefficients des matières concernées
+     *
+     * @return une map enrollmentId -> liste des SubjectResult de l'élève
+     */
+    public Map<Long, List<SubjectResult>> computeClassSubjectResults(Classroom classroom, Period period, List<Enrollment> enrollments) {
+        Long classroomId = classroom.getId();
+        Long periodId = period.getId();
+
+        // 1. Affectations + matières (1 requête)
+        List<TeachingAssignment> assignments = teachingAssignmentRepository.findByClassroomIdWithSubject(classroomId);
+
+        // 2. Évaluations + types + affectation (1 requête)
+        List<Assessment> assessments = assessmentRepository.findByClassroomIdAndPeriodIdWithDetails(classroomId, periodId);
+
+        // 3. Toutes les notes de la classe pour la période (1 requête)
+        List<Grade> grades = gradeRepository.findByClassroomIdAndPeriodId(classroomId, periodId);
+
+        // 4. Coefficients des matières (1 requête)
+        List<Long> subjectIds = assignments.stream()
+                .map(a -> a.getSubject().getId())
+                .distinct()
+                .toList();
+        Map<Long, Integer> coefficientBySubject = subjectIds.isEmpty()
+                ? Map.of()
+                : curriculumSubjectRepository.findCoefficientsBySubjectIds(subjectIds).stream()
+                        .filter(cs -> cs.getCoefficient() != null)
+                        .collect(Collectors.toMap(
+                                cs -> cs.getSubject().getId(),
+                                CurriculumSubject::getCoefficient,
+                                (a, b) -> a));
+
+        // --- Indexation en mémoire ---
+        // assessmentId -> assessment
+        Map<Long, Assessment> assessmentById = assessments.stream()
+                .collect(Collectors.toMap(Assessment::getId, a -> a));
+        // assignmentId -> liste d'évaluations
+        Map<Long, List<Assessment>> assessmentsByAssignment = assessments.stream()
+                .filter(a -> a.getAssignment() != null)
+                .collect(Collectors.groupingBy(a -> a.getAssignment().getId()));
+        // "assessmentId:studentId" -> note (un élève = une note par évaluation)
+        Map<String, BigDecimal> noteByAssessmentAndStudent = new HashMap<>();
+        for (Grade g : grades) {
+            if (g.getAssessment() == null || g.getStudent() == null || g.getNote() == null) {
+                continue;
+            }
+            noteByAssessmentAndStudent.put(
+                    g.getAssessment().getId() + ":" + g.getStudent().getId(),
+                    g.getNote());
+        }
+
+        // --- Calcul par élève ---
+        Map<Long, List<SubjectResult>> resultsByEnrollment = new HashMap<>();
+        for (Enrollment enrollment : enrollments) {
+            Long studentId = enrollment.getStudent().getId();
+            List<SubjectResult> results = new ArrayList<>();
+
+            for (TeachingAssignment assignment : assignments) {
+                Subject subject = assignment.getSubject();
+                Integer subjectCoefficient = coefficientBySubject.getOrDefault(subject.getId(), 1);
+
+                BigDecimal weightedSum = BigDecimal.ZERO;
+                BigDecimal coeffSum = BigDecimal.ZERO;
+                BigDecimal maximum = BigDecimal.ZERO;
+
+                List<Assessment> subjectAssessments = assessmentsByAssignment.getOrDefault(assignment.getId(), List.of());
+                for (Assessment assessment : subjectAssessments) {
+                    BigDecimal evalCoeff = resolveAssessmentCoefficient(assessment);
+                    BigDecimal noteMax = assessment.getNoteMax() != null ? assessment.getNoteMax() : BigDecimal.ZERO;
+                    BigDecimal studentNote = noteByAssessmentAndStudent.getOrDefault(
+                            assessment.getId() + ":" + studentId, BigDecimal.ZERO);
+
+                    weightedSum = weightedSum.add(studentNote.multiply(evalCoeff));
+                    coeffSum = coeffSum.add(evalCoeff);
+                    maximum = maximum.add(noteMax.multiply(BigDecimal.valueOf(subjectCoefficient)));
+                }
+
+                BigDecimal moyenne = coeffSum.compareTo(BigDecimal.ZERO) > 0
+                        ? weightedSum.divide(coeffSum, 2, RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO;
+                BigDecimal points = moyenne.multiply(BigDecimal.valueOf(subjectCoefficient));
+                BigDecimal pourcentage = maximum.compareTo(BigDecimal.ZERO) > 0
+                        ? points.divide(maximum, 2, RoundingMode.HALF_UP).multiply(ONE_HUNDRED)
+                        : BigDecimal.ZERO;
+
+                results.add(SubjectResult.builder()
+                        .subject(subject)
+                        .coefficient(subjectCoefficient)
+                        .moyenne(moyenne)
+                        .points(points)
+                        .maximum(maximum)
+                        .pourcentage(pourcentage)
+                        .build());
+            }
+            resultsByEnrollment.put(enrollment.getId(), results);
+        }
+
+        log.info("Calcul batch des bulletins: {} élèves, {} matières, {} évaluations, {} notes (4 requêtes)",
+                enrollments.size(), assignments.size(), assessments.size(), grades.size());
+        return resultsByEnrollment;
     }
 
     @lombok.Data

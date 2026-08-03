@@ -10,4 +10,16 @@ public interface TeachingAssignmentRepository extends JpaRepository<TeachingAssi
     List<TeachingAssignment> findBySubjectId(Long subjectId);
     List<TeachingAssignment> findByTeacherIdAndClassroomId(Long teacherId, Long classroomId);
     List<TeachingAssignment> findBySchoolId(Long schoolId);
+
+    /**
+     * Charge en une seule requête les affectations d'une classe avec leurs matières.
+     * Utilisé par le calcul batch des bulletins (évite le N+1).
+     */
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT ta FROM TeachingAssignment ta
+            LEFT JOIN FETCH ta.subject
+            WHERE ta.classroom.id = :classroomId
+            """)
+    List<TeachingAssignment> findByClassroomIdWithSubject(
+            @org.springframework.data.repository.query.Param("classroomId") Long classroomId);
 }

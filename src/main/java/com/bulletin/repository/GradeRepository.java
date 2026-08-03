@@ -64,4 +64,21 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
               AND g.assessment IS NOT NULL
             """)
     List<Grade> findCompleteBySchoolId(@Param("schoolId") Long schoolId);
+
+    /**
+     * Charge en une seule requête toutes les notes d'une classe pour une période,
+     * avec l'élève et l'évaluation (via son affectation -> matière).
+     * Utilisé par le calcul batch des bulletins (évite le N+1).
+     */
+    @Query("""
+            SELECT g FROM Grade g
+            LEFT JOIN FETCH g.student
+            LEFT JOIN FETCH g.assessment a
+            LEFT JOIN FETCH a.assignment asn
+            WHERE asn.classroom.id = :classroomId
+              AND a.period.id = :periodId
+            """)
+    List<Grade> findByClassroomIdAndPeriodId(
+            @Param("classroomId") Long classroomId,
+            @Param("periodId") Long periodId);
 }

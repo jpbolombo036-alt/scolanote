@@ -44,6 +44,7 @@ public class StudentService {
         if (request.getMatricule() == null || request.getMatricule().isBlank()) {
             student.setMatricule(generateStudentMatricule(student.getSchoolId()));
         }
+        normalizeEtat(student);
         Student saved = studentRepository.save(student);
         log.info("Élève créé: {}", saved.getId());
         return studentMapper.toResponse(saved);
@@ -89,9 +90,25 @@ public class StudentService {
     public StudentResponse updateStudent(Long id, StudentRequest request) {
         Student student = findById(id);
         studentMapper.updateEntity(request, student);
+        normalizeEtat(student);
         Student saved = studentRepository.save(student);
         log.info("Élève mis à jour: {}", saved.getId());
         return studentMapper.toResponse(saved);
+    }
+
+    /**
+     * Normalise le champ etat via l'enum EtatPersonne.
+     * Accepte le nom de l'enum ou le libellé (insensible à la casse/accents),
+     * stocke le libellé canonique, et applique "Actif" par défaut si vide.
+     */
+    private void normalizeEtat(Student student) {
+        String etat = student.getEtat();
+        if (etat == null || etat.isBlank()) {
+            student.setEtat(com.bulletin.entity.enums.EtatPersonne.defaultValue());
+        } else {
+            com.bulletin.entity.enums.EtatPersonne e = com.bulletin.entity.enums.EtatPersonne.from(etat);
+            student.setEtat(e != null ? e.getLibelle() : etat);
+        }
     }
 
     @Transactional

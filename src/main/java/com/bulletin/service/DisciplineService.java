@@ -48,6 +48,7 @@ public class DisciplineService {
         Discipline discipline = disciplineMapper.toEntity(request);
         discipline.setStudent(findStudent(request.getStudentId()));
         discipline.setPeriod(findPeriod(request.getPeriodId()));
+        normalizeAppreciations(discipline);
         Discipline saved = disciplineRepository.save(discipline);
         log.info("Discipline créée: {}", saved.getId());
         return disciplineMapper.toResponse(saved);
@@ -115,6 +116,7 @@ public class DisciplineService {
         disciplineMapper.updateEntity(request, discipline);
         discipline.setStudent(findStudent(request.getStudentId()));
         discipline.setPeriod(findPeriod(request.getPeriodId()));
+        normalizeAppreciations(discipline);
         Discipline saved = disciplineRepository.save(discipline);
         log.info("Discipline mise à jour: {}", saved.getId());
         return disciplineMapper.toResponse(saved);
@@ -133,6 +135,20 @@ public class DisciplineService {
                 .orElseThrow(() -> new ResourceNotFoundException("Discipline non trouvée avec l'ID: " + id));
         securityUtils.assertSchoolAccess(discipline.getSchoolId());
         return discipline;
+    }
+
+    /**
+     * Normalise les champs conduite et application via l'enum Appreciation (système RDC).
+     * Accepte un code (TB/B/AB/P/M) ou un libellé, et stocke le libellé canonique.
+     * Les valeurs déjà nulles restent nulles (champs optionnels).
+     */
+    private void normalizeAppreciations(Discipline discipline) {
+        if (discipline.getConduite() != null && !discipline.getConduite().isBlank()) {
+            discipline.setConduite(com.bulletin.entity.enums.Appreciation.toLibelle(discipline.getConduite()));
+        }
+        if (discipline.getApplication() != null && !discipline.getApplication().isBlank()) {
+            discipline.setApplication(com.bulletin.entity.enums.Appreciation.toLibelle(discipline.getApplication()));
+        }
     }
 
     private Student findStudent(Long id) {

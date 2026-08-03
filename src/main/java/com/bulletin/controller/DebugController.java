@@ -1,5 +1,6 @@
 package com.bulletin.controller;
 
+import com.bulletin.repository.PermissionRepository;
 import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,12 +14,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Endpoints de débogage (réservés aux utilisateurs authentifiés en prod).
+ * Utile pour vérifier l'authentification, les rôles et les permissions de l'utilisateur connecté.
+ */
 @RestController
 @RequestMapping("/debug")
 @RequiredArgsConstructor
 public class DebugController {
 
     private final SecurityUtils securityUtils;
+    private final PermissionRepository permissionRepository;
 
     @GetMapping("/whoami")
     public ResponseEntity<Map<String, Object>> whoami() {
@@ -30,6 +36,11 @@ public class DebugController {
         result.put("authorities", authentication != null ? authentication.getAuthorities().stream().map(Object::toString).toList() : List.of());
         result.put("currentUserId", securityUtils.getCurrentUserId());
         result.put("isDirection", securityUtils.isDirection());
+
+        // Permissions granulaires de l'utilisateur (via ses rôles) — utile pour tester le RBAC
+        Long userId = securityUtils.getCurrentUserId();
+        result.put("permissions", userId != null ? permissionRepository.findCodesByUserId(userId) : List.of());
+
         return ResponseEntity.ok(result);
     }
 }

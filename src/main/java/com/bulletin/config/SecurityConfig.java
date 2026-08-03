@@ -98,7 +98,10 @@ public class SecurityConfig {
                         auth.requestMatchers("/h2-console/**").permitAll();
                         auth.requestMatchers("/debug/**").permitAll();
                     } else {
-                        auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").denyAll();
+                        // En prod, Swagger est accessible uniquement aux administrateurs authentifiés
+                        // (permet de tester l'API tout en protégeant la documentation des accès publics).
+                        auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
+                                .hasAnyRole("SUPER_ADMIN", "ADMIN");
                         auth.requestMatchers("/debug/**").authenticated();
                     }
                     auth.anyRequest().authenticated();

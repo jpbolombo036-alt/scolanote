@@ -347,14 +347,16 @@ public class ReportCardService {
         if (currentUserId == null) {
             throw new SecurityException("Authentification requise");
         }
-        if (classroom.getTitulaireId() != null && classroom.getTitulaireId().equals(currentUserId)) {
-            return;
+
+        // classroom.getTitulaireId() référence un Teacher.id (pas un User.id).
+        // On vérifie que le compte User connecté est lié, via UserTeacher, au Teacher titulaire.
+        Long titulaireTeacherId = classroom.getTitulaireId();
+        if (titulaireTeacherId == null) {
+            throw new SecurityException("Accès refusé : aucun titulaire n'est défini pour cette classe");
         }
-        boolean owns = userTeacherRepository.findAll().stream()
-                .anyMatch(ut -> ut.getUser() != null && ut.getUser().getId().equals(currentUserId)
-                        && classroom.getTitulaireId() != null
-                        && ut.getTeacher() != null
-                        && ut.getTeacher().getId().equals(classroom.getTitulaireId()));
+
+        // Requête ciblée (au lieu de charger toute la table user_teachers en mémoire)
+        boolean owns = userTeacherRepository.existsByUser_IdAndTeacher_Id(currentUserId, titulaireTeacherId);
         if (!owns) {
             throw new SecurityException("Accès refusé : seuls la direction ou le titulaire de la classe peuvent générer les bulletins");
         }

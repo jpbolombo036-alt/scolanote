@@ -19,62 +19,23 @@ import java.util.Map;
 
 /**
  * Gestion des permissions par rôle (Phase 3 du RBAC).
- * Permet aux administrateurs de :
- *  - créer des rôles personnalisés (ex: SECRETAIRE, COMPTABLE)
- *  - assigner/retirer des permissions granulaires à chaque rôle
+ * Permet aux administrateurs d'assigner/retirer des permissions granulaires à chaque rôle.
  * Réservé à SUPER_ADMIN et ADMIN.
+ *
+ * Note : le CRUD des rôles (créer, lister, modifier, supprimer) est déjà géré par
+ * {@link RoleController} sur /api/roles. Ce contrôleur ne gère QUE les permissions par rôle
+ * pour éviter tout mapping ambigu.
  */
 @RestController
 @RequestMapping("/api/roles")
 @RequiredArgsConstructor
-@Tag(name = "Gestion des rôles", description = "Création de rôles et gestion de leurs permissions")
+@Tag(name = "Permissions par rôle", description = "Assignation/retrait de permissions aux rôles")
 public class RolePermissionManagementController {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final SecurityUtils securityUtils;
-
-    // === Rôles ===
-
-    @GetMapping
-    @Operation(summary = "Liste des rôles", description = "Retourne tous les rôles avec leur nombre de permissions")
-    public ResponseEntity<List<Map<String, Object>>> getAllRoles() {
-        assertAdmin();
-        List<Map<String, Object>> result = roleRepository.findAll().stream()
-                .map(role -> {
-                    long count = rolePermissionRepository.findByRoleId(role.getId()).size();
-                    return Map.<String, Object>of(
-                            "id", role.getId(),
-                            "nom", role.getNom(),
-                            "nombrePermissions", count
-                    );
-                })
-                .toList();
-        return ResponseEntity.ok(result);
-    }
-
-    @PostMapping
-    @Operation(summary = "Créer un rôle", description = "Crée un rôle personnalisé (ex: SECRETAIRE, COMPTABLE)")
-    public ResponseEntity<Map<String, Object>> createRole(@RequestBody Map<String, String> body) {
-        assertAdmin();
-        String nom = body.get("nom");
-        if (nom == null || nom.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Le nom du rôle est requis"));
-        }
-        String normalized = nom.trim().toUpperCase();
-        if (roleRepository.findByNom(normalized).isPresent()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Ce rôle existe déjà"));
-        }
-        Role saved = roleRepository.save(Role.builder().nom(normalized).build());
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "id", saved.getId(),
-                "nom", saved.getNom(),
-                "message", "Rôle créé avec succès"
-        ));
-    }
-
-    // === Permissions par rôle ===
 
     @PostMapping("/{roleId}/permissions/{permissionId}")
     @Operation(summary = "Assigner une permission", description = "Attribue une permission à un rôle")

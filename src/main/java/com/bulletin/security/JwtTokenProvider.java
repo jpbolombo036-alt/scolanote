@@ -57,6 +57,15 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(UserPrincipal userPrincipal) {
+        return generateToken(userPrincipal, List.of());
+    }
+
+    /**
+     * Génère un token JWT incluant les rôles ET les permissions de l'utilisateur.
+     * Les permissions (codes) sont ajoutées dans le claim "permissions" pour permettre
+     * les vérifications hasPermission() sans requête DB à chaque appel.
+     */
+    public String generateToken(UserPrincipal userPrincipal, List<String> permissions) {
         List<String> roles = userPrincipal.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
@@ -70,10 +79,29 @@ public class JwtTokenProvider {
                 .subject(Long.toString(userPrincipal.getId()))
                 .claim("username", userPrincipal.getUsername())
                 .claim("roles", roles)
+                .claim("permissions", permissions != null ? permissions : List.of())
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)
                 .compact();
+    }
+
+    /**
+     * Extrait les codes de permission du token (claim "permissions").
+     * Retourne une liste vide si le token n'en contient pas (tokens anciens).
+     */
+    @SuppressWarnings("unchecked")
+    public List<String> getPermissionsFromToken(String token) {
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+
+        Claims claims = Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        List<String> permissions = claims.get("permissions", List.class);
+        return permissions != null ? permissions : List.of();
     }
 
     public Long getUserIdFromToken(String token) {

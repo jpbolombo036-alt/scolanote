@@ -2,6 +2,7 @@ package com.bulletin.security;
 
 import com.bulletin.entity.Teacher;
 import com.bulletin.entity.TeachingAssignment;
+import com.bulletin.repository.PermissionRepository;
 import com.bulletin.repository.UserTeacherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -17,6 +18,7 @@ import java.util.stream.Collectors;
 public class SecurityUtils {
 
     private final UserTeacherRepository userTeacherRepository;
+    private final PermissionRepository permissionRepository;
 
     public Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -53,6 +55,48 @@ public class SecurityUtils {
         String target = role.startsWith("ROLE_") ? role : "ROLE_" + role;
         return getCurrentRoles().stream()
                 .anyMatch(r -> ("ROLE_" + r).equals(target) || r.equals(target));
+    }
+
+    /**
+     * Vérifie si l'utilisateur connecté possède une permission granulaire (ex: "BULLETIN_GENERER").
+     *
+     * Règles :
+     *  - SUPER_ADMIN a toutes les permissions (bypass).
+     *  - Sinon, on résout les permissions de l'utilisateur via ses rôles (role_permissions).
+     *
+     * Note : cette méthode requête la base (findCodesByUserId). Pour un usage intensif,
+     * préférez la lecture des permissions depuis le claim "permissions" du JWT.
+     */
+    public boolean hasPermission(String code) {
+        if (code == null || code.isBlank()) {
+            return false;
+        }
+        if (isSuperAdmin()) {
+            return true;
+        }
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            return false;
+        }
+        return permissionRepository.findCodesByUserId(userId).stream()
+                .anyMatch(c -> c.equalsIgnoreCase(code));
+    }
+
+    /**
+     * Variante de hasPermission qui prend une liste de codes de permission déjà résolus
+     * (typiquement lus depuis le JWT) — évite la requête DB.
+     */
+    public boolean hasPermission(String code, List<String> userPermissions) {
+        if (code == null || code.isBlank()) {
+            return false;
+        }
+        if (isSuperAdmin()) {
+            return true;
+        }
+        if (userPermissions == null) {
+            return false;
+        }
+        return userPermissions.stream().anyMatch(c -> c.equalsIgnoreCase(code));
     }
 
     public boolean isAdmin() {

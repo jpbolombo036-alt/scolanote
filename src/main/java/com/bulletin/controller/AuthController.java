@@ -51,6 +51,7 @@ public class AuthController {
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final SecurityUtils securityUtils;
+    private final com.bulletin.repository.PermissionRepository permissionRepository;
 
     @Value("${app.security.admin-init-key:}")
     private String adminInitKey;
@@ -218,8 +219,11 @@ public class AuthController {
                                 .build());
             }
 
+            // Charge les permissions de l'utilisateur (via ses rôles) pour les inclure dans le JWT
+            java.util.List<String> permissions = permissionRepository.findCodesByUserId(existingUser.getId());
             String token = jwtTokenProvider.generateToken(
-                    (com.bulletin.security.UserPrincipal) userPrincipalService.loadUserById(existingUser.getId())
+                    (com.bulletin.security.UserPrincipal) userPrincipalService.loadUserById(existingUser.getId()),
+                    permissions
             );
 
             return ResponseEntity.ok(TokenResponse.builder()

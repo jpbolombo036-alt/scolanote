@@ -27,6 +27,11 @@ public class JwtTokenProvider {
     @Value("${app.jwt.expiration}")
     private long jwtExpiration;
 
+    /** Durée de validité du token en secondes (pour le champ expiresIn de LoginResponse). */
+    public long getExpirationSeconds() {
+        return jwtExpiration / 1000;
+    }
+
     @PostConstruct
     public void validateSecret() {
         if (jwtSecret == null || jwtSecret.trim().isEmpty()) {

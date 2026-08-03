@@ -183,8 +183,9 @@ public class AuthController {
     private ResponseEntity<?> processLogin(String user, String pass) {
         if (user == null || pass == null || user.isBlank() || pass.isBlank()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ErrorResponse.builder()
-                            .error("Nom d'utilisateur et mot de passe requis")
+                    .body(ApiError.builder()
+                            .code("VALIDATION_ERROR")
+                            .message("Nom d'utilisateur et mot de passe requis")
                             .build());
         }
 
@@ -198,52 +199,73 @@ public class AuthController {
             User existingUser = userRepository.findByUsernameOrEmailOrTelephone(user, user, user)
                     .orElse(null);
 
+            // Anti-énumération : on ne révèle pas si l'utilisateur existe ou non (401 générique)
             if (existingUser == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ErrorResponse.builder()
-                                .error("Utilisateur non trouvé")
-                                .build());
+                return unauthorized();
             }
 
             if (!existingUser.isEnabled()) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(ErrorResponse.builder()
-                                .error("Compte désactivé. Veuillez contacter l'administrateur.")
+                        .body(ApiError.builder()
+                                .code("ACCOUNT_DISABLED")
+                                .message("Compte désactivé. Veuillez contacter l'administrateur.")
                                 .build());
             }
 
             if (existingUser.isPasswordResetRequired()) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(ErrorResponse.builder()
-                                .error("Réinitialisation du mot de passe requise. Utilisez le lien de réinitialisation pour définir un nouveau mot de passe.")
+                        .body(ApiError.builder()
+                                .code("PASSWORD_RESET_REQUIRED")
+                                .message("Réinitialisation du mot de passe requise. Utilisez le lien de réinitialisation pour définir un nouveau mot de passe.")
                                 .build());
             }
 
-            // Charge les permissions de l'utilisateur (via ses rôles) pour les inclure dans le JWT
-            java.util.List<String> permissions = permissionRepository.findCodesByUserId(existingUser.getId());
+            // Charge rôles + permissions de l'utilisateur
+            List<String> permissions = permissionRepository.findCodesByUserId(existingUser.getId());
+            List<String> roles = userRoleRepository.findAll().stream()
+                    .filter(ur -> ur.getUser() != null && ur.getUser().getId().equals(existingUser.getId()) && ur.getRole() != null)
+                    .map(ur -> ur.getRole().getNom())
+                    .toList();
+
             String token = jwtTokenProvider.generateToken(
                     (com.bulletin.security.UserPrincipal) userPrincipalService.loadUserById(existingUser.getId()),
                     permissions
             );
 
-            return ResponseEntity.ok(TokenResponse.builder()
+            // Réponse enrichie : token + durée de validité + infos utilisateur (évite un 2ème appel /auth/me)
+            return ResponseEntity.ok(LoginResponse.builder()
                     .accessToken(token)
-                    .tokenType("bearer")
+                    .tokenType("Bearer")
+                    .expiresIn(jwtTokenProvider.getExpirationSeconds())
+                    .user(LoginResponse.UserInfo.builder()
+                            .id(existingUser.getId())
+                            .username(existingUser.getUsername())
+                            .roles(roles)
+                            .schoolId(existingUser.getSchoolId())
+                            .permissions(permissions)
+                            .build())
                     .build());
 
         } catch (AuthenticationException e) {
-            log.warn("Échec d'authentification pour l'utilisateur: {}", user, e);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ErrorResponse.builder()
-                            .error("Nom d'utilisateur ou mot de passe incorrect")
-                            .build());
+            log.warn("Échec d'authentification pour l'utilisateur: {}", user);
+            return unauthorized();
         } catch (Exception e) {
             log.error("Erreur lors de l'authentification pour l'utilisateur: {}", user, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ErrorResponse.builder()
-                            .error("Erreur serveur lors de la tentative de connexion")
+                    .body(ApiError.builder()
+                            .code("SERVER_ERROR")
+                            .message("Erreur serveur lors de la tentative de connexion")
                             .build());
         }
+    }
+
+    /** Réponse 401 générique (anti-énumération : ne révèle pas si l'utilisateur existe). */
+    private ResponseEntity<ApiError> unauthorized() {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiError.builder()
+                        .code("INVALID_CREDENTIALS")
+                        .message("Nom d'utilisateur ou mot de passe incorrect")
+                        .build());
     }
 
     @GetMapping("/me")

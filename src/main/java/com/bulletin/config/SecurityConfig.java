@@ -98,10 +98,18 @@ public class SecurityConfig {
                         auth.requestMatchers("/h2-console/**").permitAll();
                         auth.requestMatchers("/debug/**").permitAll();
                     } else {
-                        // En prod, Swagger est accessible uniquement aux administrateurs authentifiés
-                        // (permet de tester l'API tout en protégeant la documentation des accès publics).
-                        auth.requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
-                                .hasAnyRole("SUPER_ADMIN", "ADMIN");
+                        // La page Swagger UI (HTML/JS statique) est publique : elle ne contient aucune donnée
+                        // sensible et permet à l'utilisateur de s'authentifier via le bouton "Authorize".
+                        auth.requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/swagger-resources/**",
+                                "/webjars/**"
+                        ).permitAll();
+                        // La doc OpenAPI est lisible publiquement (elle décrit les endpoints, pas les données).
+                        // Les appels API réels restent protégés par anyRequest().authenticated() ci-dessous :
+                        // chaque endpoint exige un JWT valide (et les permissions associées).
+                        auth.requestMatchers("/v3/api-docs/**").permitAll();
                         auth.requestMatchers("/debug/**").authenticated();
                     }
                     auth.anyRequest().authenticated();

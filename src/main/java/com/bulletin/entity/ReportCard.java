@@ -7,12 +7,12 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "report_cards")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@org.hibernate.annotations.Where(clause = "deleted_at IS NULL")
-public class ReportCard {
+public class ReportCard extends BaseEntity {
 
     public enum Statut {
         BROUILLON,
@@ -21,10 +21,6 @@ public class ReportCard {
         SIGNE,
         PUBLIE
     }
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "enrollment_id")
@@ -88,39 +84,18 @@ public class ReportCard {
     @Column(name = "signature_url", length = 500)
     private String signatureUrl;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
-        @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "school_id", insertable = false, updatable = false)
     private School school;
 
     @Column(name = "school_id")
     private Long schoolId;
 
-    @PrePersist
+    @Override
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-        if (dateGeneration == null) {
-            dateGeneration = LocalDateTime.now();
-        }
+        super.onCreate();
         if (enrollment != null && enrollment.getStudent() != null && enrollment.getStudent().getSchoolId() != null && schoolId == null) {
             schoolId = enrollment.getStudent().getSchoolId();
         }
     }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }
-
-
-
-

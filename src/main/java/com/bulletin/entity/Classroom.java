@@ -2,21 +2,14 @@ package com.bulletin.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "classrooms")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@org.hibernate.annotations.Where(clause = "deleted_at IS NULL")
-public class Classroom {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
+public class Classroom extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "academic_year_id")
     private AcademicYear academicYear;
@@ -42,28 +35,32 @@ public class Classroom {
 
     private Integer capacite;
 
-    @Column(name = "titulaire_id")
-    private Long titulaireId;
+    /**
+     * Titulaire (professeur responsable) de la classe.
+     * Relation vers l'entité Teacher (colonne titulaire_id).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "titulaire_id")
+    private Teacher titulaire;
 
     private boolean active;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+    /**
+     * Compatibilité avec l'ancien champ Long titulaireId.
+     * Permet au code existant (BulletinPdfService, ReportCardService) de continuer
+     * à appeler getTitulaireId() sans modification.
+     */
+    public Long getTitulaireId() {
+        return titulaire != null ? titulaire.getId() : null;
     }
 
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+    public void setTitulaireId(Long titulaireId) {
+        if (titulaireId == null) {
+            this.titulaire = null;
+        } else {
+            Teacher t = new Teacher();
+            t.setId(titulaireId);
+            this.titulaire = t;
+        }
     }
 }

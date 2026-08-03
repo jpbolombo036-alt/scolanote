@@ -36,7 +36,7 @@ public class GradeService {
     public GradeResponse createGrade(GradeRequest request) {
         Assessment assessment = findAssessment(request.getAssessmentId());
         periodClosureService.assertPeriodeOuverte(assessment.getPeriod().getId());
-        securityUtils.assertTeacherOwnsAssignment(assessment.getAssignment());
+        assertCanModifyGrades(assessment.getAssignment(), "NOTE_SAISIR");
         Student student = findStudent(request.getStudentId());
         Grade grade = gradeMapper.toEntity(request);
         grade.setAssessment(assessment);
@@ -100,7 +100,7 @@ public class GradeService {
         gradeMapper.updateEntity(request, grade);
         Assessment assessment = findAssessment(request.getAssessmentId());
         periodClosureService.assertPeriodeOuverte(assessment.getPeriod().getId());
-        securityUtils.assertTeacherOwnsAssignment(assessment.getAssignment());
+        assertCanModifyGrades(assessment.getAssignment(), "NOTE_MODIFIER");
         grade.setAssessment(assessment);
         grade.setStudent(findStudent(request.getStudentId()));
         Grade saved = gradeRepository.save(grade);
@@ -115,7 +115,7 @@ public class GradeService {
         if (grade.getAssessment() == null || grade.getAssessment().getAssignment() == null) {
             throw new ResourceNotFoundException("Affectation non trouvée pour la note ID: " + id);
         }
-        securityUtils.assertTeacherOwnsAssignment(grade.getAssessment().getAssignment());
+        assertCanModifyGrades(grade.getAssessment().getAssignment(), "NOTE_MODIFIER");
         grade.setDeletedAt(java.time.LocalDateTime.now());
         gradeRepository.save(grade);
         log.info("Note supprimée (soft): {}", id);
@@ -140,6 +140,19 @@ public class GradeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Élève non trouvé avec l'ID: " + id));
         securityUtils.assertSchoolAccess(student.getSchoolId());
         return student;
+    }
+
+    /**
+     * Autorise la modification des notes si :
+     *  - l'utilisateur a la permission granulaire (NOTE_SAISIR ou NOTE_MODIFIER) — ex: un délégué/secrétaire
+     *  - OU s'il est le professeur propriétaire de l'affectation (règle métier standard)
+     *  - OU s'il fait partie de la direction (bypass dans assertTeacherOwnsAssignment)
+     */
+    private void assertCanModifyGrades(com.bulletin.entity.TeachingAssignment assignment, String permissionCode) {
+        if (securityUtils.hasPermission(permissionCode)) {
+            return; // permission granulaire : pas besoin d'être le prof propriétaire
+        }
+        securityUtils.assertTeacherOwnsAssignment(assignment);
     }
 
     private GradeResponse toResponse(Grade grade) {

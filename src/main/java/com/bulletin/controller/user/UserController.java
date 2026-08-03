@@ -2,6 +2,7 @@ package com.bulletin.controller.user;
 
 import com.bulletin.dto.user.UserRequest;
 import com.bulletin.dto.user.UserResponse;
+import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,10 +21,12 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final SecurityUtils securityUtils;
 
     @PostMapping
-    @Operation(summary = "Créer un utilisateur", description = "Crée un utilisateur avec ses rôles")
+    @Operation(summary = "Créer un utilisateur", description = "Crée un utilisateur avec ses rôles (permission UTILISATEUR_GERER requise)")
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserRequest request) {
+        securityUtils.assertPermission("UTILISATEUR_GERER");
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(request));
     }
 
@@ -40,14 +43,16 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier un utilisateur", description = "Modifie un utilisateur et ses rôles")
+    @Operation(summary = "Modifier un utilisateur", description = "Modifie un utilisateur et ses rôles (permission UTILISATEUR_GERER requise)")
     public ResponseEntity<UserResponse> updateUser(@PathVariable Long id, @Valid @RequestBody UserRequest request) {
+        securityUtils.assertPermission("UTILISATEUR_GERER");
         return ResponseEntity.ok(userService.updateUser(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Supprimer un utilisateur", description = "Supprime un utilisateur")
+    @Operation(summary = "Supprimer un utilisateur", description = "Supprime un utilisateur (permission UTILISATEUR_GERER requise)")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        securityUtils.assertPermission("UTILISATEUR_GERER");
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }

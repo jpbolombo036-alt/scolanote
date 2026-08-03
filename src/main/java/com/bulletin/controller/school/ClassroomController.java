@@ -28,9 +28,7 @@ public class ClassroomController {
     @PostMapping
     @Operation(summary = "Créer une classe", description = "Crée une nouvelle classe (direction uniquement)")
     public ResponseEntity<ClassroomResponse> createClassroom(@Valid @RequestBody ClassroomRequest request) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut créer une classe");
-        }
+        securityUtils.assertPermission("CLASSE_GERER");
         return ResponseEntity.status(HttpStatus.CREATED).body(classroomService.createClassroom(request));
     }
 
@@ -61,18 +59,14 @@ public class ClassroomController {
     @PutMapping("/{id}")
     @Operation(summary = "Modifier une classe", description = "Modifie une classe (direction uniquement)")
     public ResponseEntity<ClassroomResponse> updateClassroom(@PathVariable Long id, @Valid @RequestBody ClassroomRequest request) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut modifier une classe");
-        }
+        securityUtils.assertPermission("CLASSE_GERER");
         return ResponseEntity.ok(classroomService.updateClassroom(id, request));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer une classe", description = "Supprime une classe (direction uniquement)")
     public ResponseEntity<Void> deleteClassroom(@PathVariable Long id) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut supprimer une classe");
-        }
+        securityUtils.assertPermission("CLASSE_GERER");
         classroomService.deleteClassroom(id);
         return ResponseEntity.noContent().build();
     }

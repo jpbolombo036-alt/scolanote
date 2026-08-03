@@ -28,9 +28,7 @@ public class AcademicYearController {
     @PostMapping
     @Operation(summary = "Créer une année scolaire", description = "Crée une nouvelle année scolaire (direction uniquement)")
     public ResponseEntity<AcademicYearResponse> createAcademicYear(@Valid @RequestBody AcademicYearRequest request) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut créer une année scolaire");
-        }
+        securityUtils.assertPermission("ANNEE_GERER");
         return ResponseEntity.status(HttpStatus.CREATED).body(academicYearService.createAcademicYear(request));
     }
 
@@ -61,18 +59,14 @@ public class AcademicYearController {
     @PutMapping("/{id}")
     @Operation(summary = "Modifier une année scolaire", description = "Modifie une année scolaire (direction uniquement)")
     public ResponseEntity<AcademicYearResponse> updateAcademicYear(@PathVariable Long id, @Valid @RequestBody AcademicYearRequest request) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut modifier une année scolaire");
-        }
+        securityUtils.assertPermission("ANNEE_GERER");
         return ResponseEntity.ok(academicYearService.updateAcademicYear(id, request));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer une année scolaire", description = "Supprime une année scolaire (direction uniquement)")
     public ResponseEntity<Void> deleteAcademicYear(@PathVariable Long id) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut supprimer une année scolaire");
-        }
+        securityUtils.assertPermission("ANNEE_GERER");
         academicYearService.deleteAcademicYear(id);
         return ResponseEntity.noContent().build();
     }

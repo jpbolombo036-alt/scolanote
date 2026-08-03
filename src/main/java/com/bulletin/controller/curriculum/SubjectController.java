@@ -28,9 +28,7 @@ public class SubjectController {
     @PostMapping
     @Operation(summary = "Créer une matière", description = "Crée une nouvelle matière (direction uniquement)")
     public ResponseEntity<SubjectResponse> createSubject(@Valid @RequestBody SubjectRequest request) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut créer une matière");
-        }
+        securityUtils.assertPermission("MATIERE_GERER");
         return ResponseEntity.status(HttpStatus.CREATED).body(subjectService.createSubject(request));
     }
 
@@ -55,18 +53,14 @@ public class SubjectController {
     @PutMapping("/{id}")
     @Operation(summary = "Modifier une matière", description = "Modifie une matière (direction uniquement)")
     public ResponseEntity<SubjectResponse> updateSubject(@PathVariable Long id, @Valid @RequestBody SubjectRequest request) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut modifier une matière");
-        }
+        securityUtils.assertPermission("MATIERE_GERER");
         return ResponseEntity.ok(subjectService.updateSubject(id, request));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer une matière", description = "Supprime une matière (direction uniquement)")
     public ResponseEntity<Void> deleteSubject(@PathVariable Long id) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut supprimer une matière");
-        }
+        securityUtils.assertPermission("MATIERE_GERER");
         subjectService.deleteSubject(id);
         return ResponseEntity.noContent().build();
     }

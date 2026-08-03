@@ -22,9 +22,7 @@ public class PeriodClosureController {
     @PostMapping("/{id}/verrouiller")
     @Operation(summary = "Verrouiller une période", description = "Verrouille une période pour empêcher les modifications (direction uniquement)")
     public ResponseEntity<Void> verrouiller(@PathVariable Long id) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut verrouiller une période");
-        }
+        securityUtils.assertPermission("PERIODE_VERROUILLER");
         periodClosureService.verrouillerPeriode(id);
         return ResponseEntity.status(HttpStatus.OK).build();
     }
@@ -32,9 +30,7 @@ public class PeriodClosureController {
     @PostMapping("/{id}/deverrouiller")
     @Operation(summary = "Déverrouiller une période", description = "Déverrouille une période pour permettre les modifications (direction uniquement)")
     public ResponseEntity<Void> deverrouiller(@PathVariable Long id) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut déverrouiller une période");
-        }
+        securityUtils.assertPermission("PERIODE_VERROUILLER");
         periodClosureService.deverrouillerPeriode(id);
         return ResponseEntity.status(HttpStatus.OK).build();
     }

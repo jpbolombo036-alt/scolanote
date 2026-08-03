@@ -27,9 +27,7 @@ public class PeriodController {
     @PostMapping
     @Operation(summary = "Créer une période", description = "Crée une période (direction uniquement)")
     public ResponseEntity<PeriodResponse> createPeriod(@Valid @RequestBody PeriodRequest request) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut créer une période");
-        }
+        securityUtils.assertPermission("PERIODE_GERER");
         return ResponseEntity.status(HttpStatus.CREATED).body(periodService.createPeriod(request));
     }
 

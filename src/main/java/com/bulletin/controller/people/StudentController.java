@@ -28,9 +28,7 @@ public class StudentController {
     @PostMapping
     @Operation(summary = "Créer un élève", description = "Crée un nouvel élève (direction uniquement)")
     public ResponseEntity<StudentResponse> createStudent(@Valid @RequestBody StudentRequest request) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut créer un élève");
-        }
+        securityUtils.assertPermission("ELEVE_GERER");
         return ResponseEntity.status(HttpStatus.CREATED).body(studentService.createStudent(request));
     }
 
@@ -55,18 +53,14 @@ public class StudentController {
     @PutMapping("/{id}")
     @Operation(summary = "Modifier un élève", description = "Modifie un élève (direction uniquement)")
     public ResponseEntity<StudentResponse> updateStudent(@PathVariable Long id, @Valid @RequestBody StudentRequest request) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut modifier un élève");
-        }
+        securityUtils.assertPermission("ELEVE_GERER");
         return ResponseEntity.ok(studentService.updateStudent(id, request));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer un élève", description = "Supprime un élève (direction uniquement)")
     public ResponseEntity<Void> deleteStudent(@PathVariable Long id) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut supprimer un élève");
-        }
+        securityUtils.assertPermission("ELEVE_GERER");
         studentService.deleteStudent(id);
         return ResponseEntity.noContent().build();
     }

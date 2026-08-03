@@ -28,9 +28,7 @@ public class EnrollmentController {
     @PostMapping
     @Operation(summary = "Créer une inscription", description = "Inscrit un élève dans une classe (direction uniquement)")
     public ResponseEntity<EnrollmentResponse> createEnrollment(@Valid @RequestBody EnrollmentRequest request) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut créer une inscription");
-        }
+        securityUtils.assertPermission("INSCRIPTION_GERER");
         return ResponseEntity.status(HttpStatus.CREATED).body(enrollmentService.createEnrollment(request));
     }
 
@@ -67,18 +65,14 @@ public class EnrollmentController {
     @PutMapping("/{id}")
     @Operation(summary = "Modifier une inscription", description = "Modifie une inscription (direction uniquement)")
     public ResponseEntity<EnrollmentResponse> updateEnrollment(@PathVariable Long id, @Valid @RequestBody EnrollmentRequest request) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut modifier une inscription");
-        }
+        securityUtils.assertPermission("INSCRIPTION_GERER");
         return ResponseEntity.ok(enrollmentService.updateEnrollment(id, request));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer une inscription", description = "Supprime une inscription (direction uniquement)")
     public ResponseEntity<Void> deleteEnrollment(@PathVariable Long id) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut supprimer une inscription");
-        }
+        securityUtils.assertPermission("INSCRIPTION_GERER");
         enrollmentService.deleteEnrollment(id);
         return ResponseEntity.noContent().build();
     }

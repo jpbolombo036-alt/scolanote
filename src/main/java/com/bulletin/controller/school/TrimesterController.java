@@ -27,9 +27,7 @@ public class TrimesterController {
     @PostMapping
     @Operation(summary = "Créer un trimestre", description = "Crée un trimestre (direction uniquement)")
     public ResponseEntity<TrimesterResponse> createTrimester(@Valid @RequestBody TrimesterRequest request) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut créer un trimestre");
-        }
+        securityUtils.assertPermission("TRIMESTRE_GERER");
         return ResponseEntity.status(HttpStatus.CREATED).body(trimesterService.createTrimester(request));
     }
 
@@ -60,18 +58,14 @@ public class TrimesterController {
     @PutMapping("/{id}")
     @Operation(summary = "Modifier un trimestre", description = "Modifie un trimestre (direction uniquement)")
     public ResponseEntity<TrimesterResponse> updateTrimester(@PathVariable Long id, @Valid @RequestBody TrimesterRequest request) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut modifier un trimestre");
-        }
+        securityUtils.assertPermission("TRIMESTRE_GERER");
         return ResponseEntity.ok(trimesterService.updateTrimester(id, request));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer un trimestre", description = "Supprime un trimestre (direction uniquement)")
     public ResponseEntity<Void> deleteTrimester(@PathVariable Long id) {
-        if (!securityUtils.isDirection()) {
-            throw new SecurityException("Accès refusé : seul la direction peut supprimer un trimestre");
-        }
+        securityUtils.assertPermission("TRIMESTRE_GERER");
         trimesterService.deleteTrimester(id);
         return ResponseEntity.noContent().build();
     }

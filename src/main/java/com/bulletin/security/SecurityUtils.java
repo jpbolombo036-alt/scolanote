@@ -99,6 +99,27 @@ public class SecurityUtils {
         return userPermissions.stream().anyMatch(c -> c.equalsIgnoreCase(code));
     }
 
+    /**
+     * Lève une SecurityException si l'utilisateur n'a PAS la permission demandée.
+     *
+     * Rétrocompatible avec l'ancien système : la "direction" (SUPER_ADMIN, ADMIN, DIRECTEUR, PREFET)
+     * est toujours autorisée, même si la permission granulaire n'est pas explicitement assignée.
+     * Cela permet une migration douce des contrôleurs qui utilisaient isDirection().
+     *
+     * Usage : securityUtils.assertPermission("ELEVE_GERER");
+     *
+     * @param code le code de permission (ex: "ELEVE_GERER")
+     * @throws SecurityException si la permission est absente
+     */
+    public void assertPermission(String code) {
+        if (isDirection()) {
+            return; // rétrocompatibilité : la direction a accès à tout
+        }
+        if (!hasPermission(code)) {
+            throw new SecurityException("Accès refusé : permission " + code + " requise");
+        }
+    }
+
     public boolean isAdmin() {
         return hasRole("SUPER_ADMIN") || hasRole("ADMIN");
     }

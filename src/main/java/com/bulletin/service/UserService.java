@@ -29,6 +29,8 @@ public class UserService {
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecurityUtils securityUtils;
+    private final com.bulletin.notification.NotificationPublisher notificationPublisher;
+    private final com.bulletin.notification.NotificationProperties notificationProperties;
 
     @Transactional
     public UserResponse createUser(UserRequest request) {
@@ -54,6 +56,19 @@ public class UserService {
         }
 
         log.info("Utilisateur créé: {}", saved.getId());
+
+        // Événement : utilisateur créé → e-mail de bienvenue (asynchrone)
+        if (saved.getEmail() != null && !saved.getEmail().isBlank()) {
+            notificationPublisher.publish(com.bulletin.notification.NotificationEvent
+                    .builder(com.bulletin.notification.NotificationType.USER_CREATED, saved.getEmail())
+                    .recipientName(saved.getUsername())
+                    .variable("username", saved.getUsername())
+                    .variable("lien", notificationProperties.getFrontendUrl())
+                    .referenceId(saved.getId())
+                    .schoolId(saved.getSchoolId())
+                    .build());
+        }
+
         return toResponse(saved);
     }
 

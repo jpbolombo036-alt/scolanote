@@ -19,6 +19,8 @@ public class ReportCardWorkflowService {
 
     private final ReportCardRepository reportCardRepository;
     private final SecurityUtils securityUtils;
+    private final com.bulletin.notification.NotificationPublisher notificationPublisher;
+    private final com.bulletin.notification.NotificationProperties notificationProperties;
 
     @Transactional
     public ReportCardWorkflowResponse validateByPrefet(Long reportCardId) {
@@ -79,7 +81,48 @@ public class ReportCardWorkflowService {
         reportCard.setPublieAt(java.time.LocalDateTime.now());
         reportCardRepository.save(reportCard);
         log.info("Bulletin {} publié", reportCardId);
+
+        // Événement : bulletin publié → notification par e-mail au parent (asynchrone)
+        notifyBulletinPublished(reportCard);
+
         return toWorkflowResponse(reportCard);
+    }
+
+    /**
+     * Publie un événement BULLETIN_PUBLISHED au parent de l'élève (si un emailParent existe).
+     * Le destinataire est l'email du parent renseigné sur la fiche élève.
+     */
+    private void notifyBulletinPublished(ReportCard reportCard) {
+        try {
+            if (reportCard.getEnrollment() == null || reportCard.getEnrollment().getStudent() == null) {
+                return;
+            }
+            com.bulletin.entity.Student student = reportCard.getEnrollment().getStudent();
+            String emailParent = student.getEmailParent();
+            if (emailParent == null || emailParent.isBlank()) {
+                log.debug("Bulletin {} publié sans emailParent — pas de notification e-mail", reportCard.getId());
+                return;
+            }
+
+            String studentName = student.getNom()
+                    + (student.getPostnom() != null ? " " + student.getPostnom() : "")
+                    + (student.getPrenom() != null ? " " + student.getPrenom() : "");
+            String periodNom = reportCard.getPeriod() != null ? reportCard.getPeriod().getNom() : null;
+            String lien = notificationProperties.getFrontendUrl() + "/bulletins/" + reportCard.getId();
+
+            notificationPublisher.publish(com.bulletin.notification.NotificationEvent
+                    .builder(com.bulletin.notification.NotificationType.BULLETIN_PUBLISHED, emailParent)
+                    .recipientName(studentName)
+                    .variable("eleve", studentName)
+                    .variable("periode", periodNom)
+                    .variable("lien", lien)
+                    .referenceId(reportCard.getId())
+                    .schoolId(reportCard.getSchoolId())
+                    .build());
+        } catch (Exception e) {
+            // La notification ne doit JAMAIS impacter la publication du bulletin.
+            log.warn("Impossible de notifier la publication du bulletin {} : {}", reportCard.getId(), e.getMessage());
+        }
     }
 
     /**

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#e2e8f0;font-family:'Segoe UI',Arial,sans-serif;">
+    <div style="max-width:600px;margin:24px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+        <div th:replace="~{mail/fragments/layout :: header}"></div>
+        <div style="padding:32px 28px;">
+            <h2 style="color:#1e293b;font-size:22px;margin:0 0 16px 0;">Nouveau bulletin disponible</h2>
+            <p style="color:#475569;font-size:15px;line-height:1.6;">
+                Bonjour <strong th:text="${recipientName} ?: 'cher parent'">cher parent</strong>,
+            </p>
+            <p style="color:#475569;font-size:15px;line-height:1.6;">
+                Le bulletin scolaire de <strong th:text="${eleve}">l'élève</strong>
+                <span th:if="${periode}"> pour la période <strong th:text="${periode}"></strong></span>
+                <span th:if="${anneeScolaire}"> (<span th:text="${anneeScolaire}"></span>)</span>
+                est désormais disponible.
+            </p>
+            <p th:if="${ecole}" style="color:#475569;font-size:15px;line-height:1.6;">
+                Établissement : <strong th:text="${ecole}"></strong>
+            </p>
+            <div th:if="${lien}" th:replace="~{mail/fragments/layout :: button(${lien}, 'Consulter le bulletin')}"></div>
+            <p style="color:#64748b;font-size:13px;line-height:1.6;margin-top:24px;">
+                Connectez-vous à votre espace pour consulter et télécharger le bulletin en PDF.
+            </p>
+        </div>
+        <div th:replace="~{mail/fragments/layout :: footer}"></div>
+    </div>
+</body>
+</html>

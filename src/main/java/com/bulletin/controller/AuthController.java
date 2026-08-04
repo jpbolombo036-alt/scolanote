@@ -13,7 +13,6 @@ import com.bulletin.repository.UserRoleRepository;
 import com.bulletin.security.JwtTokenProvider;
 import com.bulletin.security.SecurityUtils;
 import com.bulletin.security.UserPrincipalService;
-import com.bulletin.service.EmailService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.PostConstruct;
@@ -45,13 +44,14 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
-    private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final UserPrincipalService userPrincipalService;
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final SecurityUtils securityUtils;
     private final com.bulletin.repository.PermissionRepository permissionRepository;
+    private final com.bulletin.notification.NotificationPublisher notificationPublisher;
+    private final com.bulletin.notification.NotificationProperties notificationProperties;
 
     @Value("${app.security.admin-init-key:}")
     private String adminInitKey;
@@ -155,6 +155,18 @@ public class AuthController {
                 .user(user)
                 .role(role)
                 .build());
+
+        // Événement : utilisateur créé → e-mail de bienvenue (asynchrone, n'affecte jamais la réponse)
+        if (user.getEmail() != null && !user.getEmail().isBlank()) {
+            notificationPublisher.publish(com.bulletin.notification.NotificationEvent
+                    .builder(com.bulletin.notification.NotificationType.USER_CREATED, user.getEmail())
+                    .recipientName(user.getUsername())
+                    .variable("username", user.getUsername())
+                    .variable("lien", notificationProperties.getFrontendUrl())
+                    .referenceId(user.getId())
+                    .schoolId(user.getSchoolId())
+                    .build());
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(RegisterAgentResponse.builder()
@@ -343,7 +355,17 @@ public class AuthController {
                 return;
             }
             String resetToken = jwtTokenProvider.generateResetToken(user.getUsername());
-            emailService.sendPasswordResetEmail(user.getEmail(), user.getUsername(), resetToken);
+            String resetLink = notificationProperties.getFrontendUrl() + "/reinitialiser-mot-de-passe?token=" + resetToken;
+
+            // Événement : demande de réinitialisation → e-mail (asynchrone, via le module Notification)
+            notificationPublisher.publish(com.bulletin.notification.NotificationEvent
+                    .builder(com.bulletin.notification.NotificationType.PASSWORD_RESET, user.getEmail())
+                    .recipientName(user.getUsername())
+                    .variable("lien", resetLink)
+                    .variable("dureeExpiration", "30 minutes")
+                    .referenceId(user.getId())
+                    .schoolId(user.getSchoolId())
+                    .build());
         });
 
         return ResponseEntity.ok("Si ce compte existe, un lien de réinitialisation a été envoyé");
@@ -361,6 +383,17 @@ public class AuthController {
             user.setPassword(passwordEncoder.encode(confirm.getNewPassword()));
             user.setPasswordResetRequired(false);
             userRepository.save(user);
+
+            // Événement : mot de passe modifié → e-mail de confirmation de sécurité (asynchrone)
+            if (user.getEmail() != null && !user.getEmail().isBlank()) {
+                notificationPublisher.publish(com.bulletin.notification.NotificationEvent
+                        .builder(com.bulletin.notification.NotificationType.PASSWORD_CHANGED, user.getEmail())
+                        .recipientName(user.getUsername())
+                        .variable("date", java.time.LocalDateTime.now().toString())
+                        .referenceId(user.getId())
+                        .schoolId(user.getSchoolId())
+                        .build());
+            }
 
             return ResponseEntity.ok("Mot de passe réinitialisé avec succès");
         } catch (Exception e) {
@@ -383,6 +416,17 @@ public class AuthController {
 
         user.setEnabled(true);
         userRepository.save(user);
+
+        // Événement : compte activé → e-mail de confirmation (asynchrone)
+        if (user.getEmail() != null && !user.getEmail().isBlank()) {
+            notificationPublisher.publish(com.bulletin.notification.NotificationEvent
+                    .builder(com.bulletin.notification.NotificationType.USER_ACTIVATED, user.getEmail())
+                    .recipientName(user.getUsername())
+                    .variable("lien", notificationProperties.getFrontendUrl())
+                    .referenceId(user.getId())
+                    .schoolId(user.getSchoolId())
+                    .build());
+        }
 
         return ResponseEntity.ok("Utilisateur " + username + " activé avec succès");
     }

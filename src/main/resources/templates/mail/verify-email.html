@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#e2e8f0;font-family:'Segoe UI',Arial,sans-serif;">
+    <div style="max-width:600px;margin:24px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+        <div th:replace="~{mail/fragments/layout :: header}"></div>
+        <div style="padding:32px 28px;">
+            <h2 style="color:#1e293b;font-size:22px;margin:0 0 16px 0;">Vérifiez votre adresse e-mail</h2>
+            <p style="color:#475569;font-size:15px;line-height:1.6;">
+                Bonjour <strong th:text="${recipientName} ?: 'cher utilisateur'">cher utilisateur</strong>,
+            </p>
+            <p style="color:#475569;font-size:15px;line-height:1.6;">
+                Pour sécuriser votre compte, veuillez vérifier votre adresse e-mail
+                <span th:if="${code}"> en utilisant le code ci-dessous</span> :
+            </p>
+            <div th:if="${code}" style="text-align:center;margin:24px 0;">
+                <span style="display:inline-block;background:#f1f5f9;border:2px dashed #2563eb;color:#1d4ed8;font-size:28px;font-weight:800;letter-spacing:6px;padding:16px 32px;border-radius:8px;" th:text="${code}">000000</span>
+            </div>
+            <div th:if="${lien}" th:replace="~{mail/fragments/layout :: button(${lien}, 'Vérifier mon adresse')}"></div>
+        </div>
+        <div th:replace="~{mail/fragments/layout :: footer}"></div>
+    </div>
+</body>
+</html>

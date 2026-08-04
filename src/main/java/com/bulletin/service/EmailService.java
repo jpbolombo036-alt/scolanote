@@ -8,6 +8,14 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import jakarta.mail.internet.MimeMessage;
 
+/**
+ * @deprecated Ce service est remplacé par le module de notifications
+ * (com.bulletin.notification) qui envoie les e-mails de façon asynchrone
+ * via des événements (NotificationEvent + NotificationListener), avec templates
+ * Thymeleaf et journalisation en base. Conservé temporairement pour compatibilité,
+ * mais n'est plus utilisé par l'application.
+ */
+@Deprecated(forRemoval = true)
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -21,6 +29,7 @@ public class EmailService {
     @Value("${app.frontend.url:http://localhost:3000}")
     private String frontendUrl;
 
+    @Deprecated(forRemoval = true)
     public void sendPasswordResetEmail(String toEmail, String username, String resetToken) {
         log.info("Tentative d'envoi d'email de réinitialisation à: {}", toEmail);
 

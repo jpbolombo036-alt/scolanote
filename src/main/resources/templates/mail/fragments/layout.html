@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Fragment : en-tête de marque (branding ScolaNote) -->
+<div th:fragment="header" style="background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);padding:28px 24px;text-align:center;border-radius:12px 12px 0 0;">
+    <h1 style="color:#ffffff;margin:0;font-size:26px;font-weight:800;letter-spacing:0.5px;" th:text="${appName}">ScolaNote</h1>
+    <p style="color:#dbeafe;margin:6px 0 0 0;font-size:13px;">Gestion des bulletins scolaires</p>
+</div>
+
+<!-- Fragment : pied de page -->
+<div th:fragment="footer" style="background:#f1f5f9;padding:18px 24px;text-align:center;border-radius:0 0 12px 12px;border-top:1px solid #e2e8f0;">
+    <p style="color:#64748b;font-size:12px;margin:0;">
+        Cet e-mail a été envoyé automatiquement par <strong th:text="${appName}">ScolaNote</strong>.<br/>
+        Merci de ne pas y répondre.
+    </p>
+</div>
+
+<!-- Fragment : bouton d'appel à l'action -->
+<div th:fragment="button(url,label)" style="text-align:center;margin:28px 0;">
+    <a th:href="${url}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 32px;border-radius:8px;" th:text="${label}">Cliquer ici</a>
+</div>
+</body>
+</html>

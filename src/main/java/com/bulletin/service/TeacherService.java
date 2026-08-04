@@ -98,23 +98,53 @@ public class TeacherService {
     @Transactional(readOnly = true)
     public Page<TeacherResponse> getAccessibleTeachers(Pageable pageable) {
         if (isSuperAdmin()) {
-            return teacherRepository.findAll(pageable)
-                    .map(teacherMapper::toResponse);
+            return teacherRepository.findAll(sanitizePageable(pageable))
+                    .map(this::toResponseSafely);
         }
-        return teacherRepository.findBySchoolId(requireSchoolId(), pageable)
-                .map(teacherMapper::toResponse);
+        return teacherRepository.findBySchoolId(requireSchoolId(), sanitizePageable(pageable))
+                .map(this::toResponseSafely);
     }
 
     @Transactional(readOnly = true)
     public List<TeacherResponse> getAccessibleTeachers() {
         if (isSuperAdmin()) {
             return teacherRepository.findAll().stream()
-                    .map(teacherMapper::toResponse)
+                    .map(this::toResponseSafely)
                     .toList();
         }
         return teacherRepository.findBySchoolId(requireSchoolId()).stream()
-                .map(teacherMapper::toResponse)
+                .map(this::toResponseSafely)
                 .toList();
+    }
+
+    /**
+     * Mapping résilient d'une entité Teacher vers TeacherResponse.
+     * Une entité qui échoue au mapping ne fait pas échouer toute la liste (retourne null, filtré).
+     */
+    private TeacherResponse toResponseSafely(Teacher teacher) {
+        try {
+            return teacherMapper.toResponse(teacher);
+        } catch (Exception e) {
+            log.warn("Impossible de mapper le professeur {} : {}", teacher != null ? teacher.getId() : "null", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Sécurise le Pageable : ignore les tris (Sort) sur des propriétés invalides
+     * qui causeraient une PropertyReferenceException (erreur 500) côté Spring Data.
+     * Conserve page/size, force un tri valide par défaut sur "nom".
+     */
+    private Pageable sanitizePageable(Pageable pageable) {
+        if (pageable == null) {
+            return Pageable.unpaged();
+        }
+        // Force un tri valide connu pour éviter les tris sur des propriétés inexistantes.
+        var sort = org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "nom");
+        return org.springframework.data.domain.PageRequest.of(
+                Math.max(0, pageable.getPageNumber()),
+                Math.max(1, pageable.getPageSize()),
+                sort);
     }
 
     @Transactional

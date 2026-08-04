@@ -171,10 +171,22 @@ public class JwtTokenProvider {
     }
 
     public String generateResetToken(String username) {
+        return generateResetToken(username, 1800000); // 30 minutes (flux self-service)
+    }
+
+    /**
+     * Génère un token de réinitialisation avec une durée de validité personnalisée.
+     * Utilisé notamment pour la réinitialisation par un administrateur (durée plus longue,
+     * ex: 24h, car l'utilisateur n'est pas à l'origine de la demande).
+     *
+     * @param username     nom d'utilisateur (subject du token)
+     * @param expirationMs durée de validité en millisecondes
+     */
+    public String generateResetToken(String username, long expirationMs) {
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
 
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + 1800000); // 30 minutes
+        Date expiryDate = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
                 .subject(username)

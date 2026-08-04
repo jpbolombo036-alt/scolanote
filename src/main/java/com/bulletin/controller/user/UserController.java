@@ -56,4 +56,16 @@ public class UserController {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/reset-password")
+    @Operation(summary = "Réinitialiser le mot de passe (admin)",
+            description = "Envoie un lien de réinitialisation (valide 24h) à l'adresse e-mail de l'utilisateur. "
+                    + "L'admin ne voit ni ne définit jamais le mot de passe. "
+                    + "Permission UTILISATEUR_GERER requise.")
+    public ResponseEntity<java.util.Map<String, String>> adminResetPassword(@PathVariable Long id) {
+        securityUtils.assertPermission("UTILISATEUR_GERER");
+        userService.adminResetPassword(id);
+        return ResponseEntity.ok(java.util.Map.of(
+                "message", "Un lien de réinitialisation a été envoyé à l'adresse e-mail de l'utilisateur"));
+    }
 }

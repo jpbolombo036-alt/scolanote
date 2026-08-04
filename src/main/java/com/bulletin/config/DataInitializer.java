@@ -30,7 +30,8 @@ public class DataInitializer {
             "ADMIN",
             "DIRECTEUR",
             "PREFET",
-            "ENSEIGNANT"
+            "ENSEIGNANT",
+            "PARENT"
     );
 
     private final RoleRepository roleRepository;

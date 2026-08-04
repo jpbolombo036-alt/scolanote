@@ -232,12 +232,10 @@ public class AuthController {
                                 .build());
             }
 
-            // Charge rôles + permissions de l'utilisateur
-            List<String> permissions = permissionRepository.findCodesByUserId(existingUser.getId());
-            List<String> roles = userRoleRepository.findAll().stream()
-                    .filter(ur -> ur.getUser() != null && ur.getUser().getId().equals(existingUser.getId()) && ur.getRole() != null)
-                    .map(ur -> ur.getRole().getNom())
-                    .toList();
+            // Charge rôles + permissions de l'utilisateur.
+            // Résilient : une erreur ici ne doit JAMAIS faire échouer le login (listes vides en fallback).
+            List<String> permissions = loadPermissionsSafely(existingUser.getId());
+            List<String> roles = loadRolesSafely(existingUser.getId());
 
             String token = jwtTokenProvider.generateToken(
                     (com.bulletin.security.UserPrincipal) userPrincipalService.loadUserById(existingUser.getId()),
@@ -268,6 +266,35 @@ public class AuthController {
                             .code("SERVER_ERROR")
                             .message("Erreur serveur lors de la tentative de connexion")
                             .build());
+        }
+    }
+
+    /**
+     * Charge les permissions de l'utilisateur sans jamais lever d'exception.
+     * En cas d'erreur (ex: requête permissions), retourne une liste vide et log l'erreur —
+     * le login ne doit JAMAIS échouer à cause du chargement des permissions.
+     */
+    private List<String> loadPermissionsSafely(Long userId) {
+        try {
+            return permissionRepository.findCodesByUserId(userId);
+        } catch (Exception e) {
+            log.warn("Impossible de charger les permissions de l'utilisateur {} (login continue): {}", userId, e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * Charge les rôles de l'utilisateur sans jamais lever d'exception.
+     */
+    private List<String> loadRolesSafely(Long userId) {
+        try {
+            return userRoleRepository.findAll().stream()
+                    .filter(ur -> ur.getUser() != null && ur.getUser().getId().equals(userId) && ur.getRole() != null)
+                    .map(ur -> ur.getRole().getNom())
+                    .toList();
+        } catch (Exception e) {
+            log.warn("Impossible de charger les rôles de l'utilisateur {} (login continue): {}", userId, e.getMessage());
+            return List.of();
         }
     }
 

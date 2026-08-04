@@ -16,12 +16,15 @@ public interface PermissionRepository extends JpaRepository<Permission, Long> {
     /**
      * Charge tous les codes de permission associés à un utilisateur (via ses rôles).
      * Utilisé pour enrichir le JWT et pour hasPermission().
+     *
+     * JPQL : on navigue par les relations d'entités (UserRole -> Role <- RolePermission -> Permission),
+     * sans JOIN ON explicite entre entités non liées (invalide en JPQL).
      */
     @Query("""
-            SELECT DISTINCT p.code FROM Permission p
-            JOIN RolePermission rp ON rp.permission.id = p.id
-            JOIN UserRole ur ON ur.role.id = rp.role.id
-            WHERE ur.user.id = :userId
+            SELECT DISTINCT rp.permission.code
+            FROM UserRole ur, RolePermission rp
+            WHERE ur.role.id = rp.role.id
+              AND ur.user.id = :userId
             """)
     List<String> findCodesByUserId(@Param("userId") Long userId);
 }

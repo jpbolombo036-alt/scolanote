@@ -126,7 +126,10 @@ public class ReportCardService {
                             .orElse(null);
 
                     if (grade != null && grade.getObservation() != null) {
-                        appreciations.put(assessment.getAssignment().getSubject().getId(), grade.getObservation());
+                        if (assessment.getAssignment() != null && assessment.getAssignment().getSubject() != null
+                                && assessment.getAssignment().getSubject().getId() != null) {
+                            appreciations.put(assessment.getAssignment().getSubject().getId(), grade.getObservation());
+                        }
                     }
                 }
             }

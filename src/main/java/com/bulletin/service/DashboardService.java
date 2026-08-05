@@ -131,17 +131,17 @@ public class DashboardService {
                 ? reportCard.getPourcentage().divide(new BigDecimal("5"), 2, RoundingMode.HALF_UP)
                 : null;
 
-        String mention = reportCard.getMention();
-        if (mention != null) {
-            mention = switch (mention) {
-                case "EXCELLENT" -> "Très Bien";
-                case "TRES BIEN" -> "Bien";
-                case "BIEN" -> "Assez Bien";
-                case "SATISFACTION" -> "Passable";
-                case "ECHEC" -> "Insuffisant";
-                default -> mention;
-            };
-        }
+                String mention = reportCard.getMention();
+                if (mention != null) {
+                        mention = switch (mention) {
+                                case "EXCELLENT", "Excellent" -> "Excellent";
+                                case "TRES BIEN", "Très Bien" -> "Très Bien";
+                                case "BIEN", "Bien" -> "Bien";
+                                case "SATISFACTION", "Passable" -> "Passable";
+                                case "ECHEC", "Insuffisant" -> "Insuffisant";
+                                default -> mention;
+                        };
+                }
 
         String date = reportCard.getDateGeneration() != null
                 ? reportCard.getDateGeneration().format(DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.FRENCH))
@@ -169,7 +169,7 @@ public class DashboardService {
             String mention = card.getMention();
             if (mention == null) continue;
             switch (mention) {
-                case "Très Bien", "EXCELLENT" -> tresBien++;
+                                case "Excellent", "Très Bien", "EXCELLENT" -> tresBien++;
                 case "Bien", "TRES BIEN" -> bien++;
                 case "Assez Bien", "BIEN" -> assezBien++;
                 case "Passable", "SATISFACTION" -> passable++;

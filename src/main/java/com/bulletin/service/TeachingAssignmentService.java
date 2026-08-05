@@ -15,6 +15,8 @@ import com.bulletin.repository.TeachingAssignmentRepository;
 import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,6 +63,16 @@ public class TeachingAssignmentService {
     @Transactional(readOnly = true)
     public TeachingAssignmentResponse getTeachingAssignment(Long id) {
         return teachingAssignmentMapper.toResponse(findById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<TeachingAssignmentResponse> getAccessibleTeachingAssignments(Pageable pageable) {
+        if (isSuperAdmin()) {
+            return teachingAssignmentRepository.findAll(pageable)
+                    .map(teachingAssignmentMapper::toResponse);
+        }
+        return teachingAssignmentRepository.findBySchoolId(requireSchoolId(), pageable)
+                .map(teachingAssignmentMapper::toResponse);
     }
 
     @Transactional(readOnly = true)

@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,8 +26,9 @@ public class TeachingAssignmentController {
     private final SecurityUtils securityUtils;
 
     @PostMapping
-    @Operation(summary = "Créer une affectation", description = "Affecte un professeur à une matière dans une classe")
+    @Operation(summary = "Créer une affectation", description = "Affecte un professeur à une matière dans une classe (direction)")
     public ResponseEntity<TeachingAssignmentResponse> createTeachingAssignment(@Valid @RequestBody TeachingAssignmentRequest request) {
+        securityUtils.assertPermission("AFFECTATION_GERER");
         return ResponseEntity.status(HttpStatus.CREATED).body(teachingAssignmentService.createTeachingAssignment(request));
     }
 
@@ -36,8 +39,14 @@ public class TeachingAssignmentController {
     }
 
     @GetMapping
-    @Operation(summary = "Liste des affectations", description = "Retourne les affectations accessibles à l'utilisateur connecté")
-    public ResponseEntity<List<TeachingAssignmentResponse>> getAccessibleTeachingAssignments() {
+    @Operation(summary = "Liste des affectations", description = "Retourne les affectations accessibles à l'utilisateur connecté (paginé)")
+    public ResponseEntity<Page<TeachingAssignmentResponse>> getAccessibleTeachingAssignments(Pageable pageable) {
+        return ResponseEntity.ok(teachingAssignmentService.getAccessibleTeachingAssignments(pageable));
+    }
+
+    @GetMapping("/all")
+    @Operation(summary = "Liste complète des affectations", description = "Retourne toutes les affectations sans pagination")
+    public ResponseEntity<List<TeachingAssignmentResponse>> getAllTeachingAssignments() {
         return ResponseEntity.ok(teachingAssignmentService.getAccessibleTeachingAssignments());
     }
 
@@ -60,15 +69,27 @@ public class TeachingAssignmentController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier une affectation", description = "Modifie une affectation")
+    @Operation(summary = "Modifier une affectation", description = "Modifie une affectation (direction)")
     public ResponseEntity<TeachingAssignmentResponse> updateTeachingAssignment(@PathVariable Long id, @Valid @RequestBody TeachingAssignmentRequest request) {
+        securityUtils.assertPermission("AFFECTATION_GERER");
         return ResponseEntity.ok(teachingAssignmentService.updateTeachingAssignment(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Supprimer une affectation", description = "Supprime une affectation")
+    @Operation(summary = "Supprimer une affectation", description = "Supprime une affectation (direction)")
     public ResponseEntity<Void> deleteTeachingAssignment(@PathVariable Long id) {
+        securityUtils.assertPermission("AFFECTATION_GERER");
         teachingAssignmentService.deleteTeachingAssignment(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Alias « /classe/{classeId} » conforme à la spécification (FRONTEND_SPEC.md)
+     * et au client frontend. L'ancien slug /salle/{salleId} est conservé pour la rétrocompatibilité.
+     */
+    @GetMapping("/classe/{classeId}")
+    @Operation(summary = "Affectations par classe", description = "Retourne les affectations d'une classe (slug /classe)")
+    public ResponseEntity<List<TeachingAssignmentResponse>> getByClassroomByClasse(@PathVariable Long classeId) {
+        return ResponseEntity.ok(teachingAssignmentService.getByClassroom(classeId));
     }
 }

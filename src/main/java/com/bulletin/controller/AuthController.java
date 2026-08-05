@@ -327,9 +327,113 @@ public class AuthController {
                 .id(user.getId())
                 .username(user.getUsername())
                 .enabled(user.isEnabled())
+                .email(user.getEmail())
+                .telephone(user.getTelephone())
                 .roles(roles)
                 .schoolId(user.getSchoolId())
                 .build());
+    }
+
+    @PutMapping("/me")
+    @Operation(summary = "Mettre à jour le profil", description = "Met à jour l'adresse email et le téléphone de l'utilisateur connecté")
+    public ResponseEntity<CurrentUserResponse> updateProfile(@Valid @RequestBody ProfileUpdateRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            userRepository.findByEmail(request.getEmail())
+                    .filter(existing -> !existing.getId().equals(user.getId()))
+                    .ifPresent(existing -> {
+                        throw new IllegalArgumentException("Cet email est déjà utilisé");
+                    });
+        }
+
+        if (request.getTelephone() != null && !request.getTelephone().isBlank()) {
+            userRepository.findByTelephone(request.getTelephone())
+                    .filter(existing -> !existing.getId().equals(user.getId()))
+                    .ifPresent(existing -> {
+                        throw new IllegalArgumentException("Ce téléphone est déjà utilisé");
+                    });
+        }
+
+        user.setEmail(request.getEmail());
+        user.setTelephone(request.getTelephone());
+        User saved = userRepository.save(user);
+
+        List<String> roles = userRoleRepository.findAll().stream()
+                .filter(ur -> ur.getUser() != null && ur.getUser().getId().equals(saved.getId()) && ur.getRole() != null)
+                .map(ur -> ur.getRole().getNom())
+                .toList();
+
+        return ResponseEntity.ok(CurrentUserResponse.builder()
+                .id(saved.getId())
+                .username(saved.getUsername())
+                .enabled(saved.isEnabled())
+                .email(saved.getEmail())
+                .telephone(saved.getTelephone())
+                .roles(roles)
+                .schoolId(saved.getSchoolId())
+                .build());
+    }
+
+    @PostMapping("/change-password")
+    @Operation(summary = "Changer le mot de passe", description = "Met à jour le mot de passe de l'utilisateur connecté en vérifiant le mot de passe actuel")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiError.builder()
+                            .code("INVALID_CURRENT_PASSWORD")
+                            .message("Le mot de passe actuel est incorrect")
+                            .build());
+        }
+
+        String newPassword = request.getNewPassword();
+        if (newPassword == null || newPassword.isBlank() || newPassword.length() < 8) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiError.builder()
+                            .code("VALIDATION_ERROR")
+                            .message("Le nouveau mot de passe doit contenir au moins 8 caractères")
+                            .build());
+        }
+
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiError.builder()
+                            .code("VALIDATION_ERROR")
+                            .message("Le nouveau mot de passe doit être différent de l'ancien")
+                            .build());
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordResetRequired(false);
+        userRepository.save(user);
+
+        if (user.getEmail() != null && !user.getEmail().isBlank()) {
+            notificationPublisher.publish(com.bulletin.notification.NotificationEvent
+                    .builder(com.bulletin.notification.NotificationType.PASSWORD_CHANGED, user.getEmail())
+                    .recipientName(user.getUsername())
+                    .variable("date", java.time.LocalDateTime.now().toString())
+                    .referenceId(user.getId())
+                    .schoolId(user.getSchoolId())
+                    .build());
+        }
+
+        return ResponseEntity.ok("Mot de passe mis à jour avec succès");
     }
 
     @PostMapping("/init-admin")

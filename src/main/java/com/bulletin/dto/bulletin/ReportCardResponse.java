@@ -37,6 +37,7 @@ public class ReportCardResponse {
     private String decision;
     private LocalDateTime dateGeneration;
     private String pdfUrl;
+    private String statut;
     private List<ReportCardDetailResponse> details;
     private Integer totalAbsences;
     private Integer totalRetards;

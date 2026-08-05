@@ -17,6 +17,7 @@ public interface ReportCardMapper {
     @Mapping(target = "classroomNom", source = "enrollment.classroom.nom")
     @Mapping(target = "periodId", source = "period.id")
     @Mapping(target = "periodNom", source = "period.nom")
+    @Mapping(target = "statut", source = "statut")
     @Mapping(target = "details", ignore = true)
     @Mapping(target = "totalAbsences", source = "totalAbsences")
     @Mapping(target = "totalRetards", source = "totalRetards")

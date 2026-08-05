@@ -175,7 +175,16 @@ public class ReportCardService {
             responses.add(toResponse(reportCard));
         }
 
-        periodClosureService.verrouillerPeriode(period.getId());
+        try {
+            if (!period.isVerrouille()) {
+                periodClosureService.verrouillerPeriode(period.getId());
+            }
+        } catch (IllegalStateException ex) {
+            log.info("Période déjà verrouillée, verrouillage automatique ignoré pour la génération du bulletin : {}", ex.getMessage());
+        } catch (SecurityException ex) {
+            log.info("L'utilisateur n'a pas la permission de verrouiller la période automatiquement : {}", ex.getMessage());
+        }
+
         periodClosureService.verrouillerAnneeSiComplete(period.getId());
 
         return responses;

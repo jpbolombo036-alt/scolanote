@@ -28,12 +28,12 @@ public class AdminDataController {
     @GetMapping("/rapports/{reportKey}")
     @Operation(summary = "Générer un rapport")
     public ResponseEntity<byte[]> generateReport(@PathVariable String reportKey) {
-        byte[] content = adminDataService.generateReport(reportKey);
+        var file = adminDataService.generateReport(reportKey);
         org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-        headers.setContentType(org.springframework.http.MediaType.APPLICATION_PDF);
-        headers.setContentDisposition(org.springframework.http.ContentDisposition.attachment().filename(reportKey + ".pdf").build());
-        headers.setContentLength(content.length);
-        return ResponseEntity.ok().headers(headers).body(content);
+        headers.setContentType(org.springframework.http.MediaType.parseMediaType(file.contentType));
+        headers.setContentDisposition(org.springframework.http.ContentDisposition.attachment().filename(file.filename).build());
+        headers.setContentLength(file.content.length);
+        return ResponseEntity.ok().headers(headers).body(file.content);
     }
 
     @PostMapping("/exports")

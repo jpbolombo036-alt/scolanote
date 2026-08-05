@@ -19,7 +19,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
@@ -70,33 +72,44 @@ public class DashboardService {
 
         DashboardResponse.MentionDistribution distribution = computeMentions(allCards);
 
-        List<DashboardResponse.ActivityItem> activities = List.of(
-                DashboardResponse.ActivityItem.builder()
-                        .text("Bulletin de Marie Dupont enregistré")
-                        .time("Il y a 2h")
-                        .type("bulletin")
-                        .build(),
-                DashboardResponse.ActivityItem.builder()
-                        .text("Nouvel élève ajouté : Lucas Petit")
-                        .time("Il y a 4h")
-                        .type("student")
-                        .build(),
-                DashboardResponse.ActivityItem.builder()
-                        .text("Bulletin archivé — Trimestre 2")
-                        .time("Il y a 6h")
-                        .type("archive")
-                        .build(),
-                DashboardResponse.ActivityItem.builder()
-                        .text("Notes mises à jour pour 5ème A")
-                        .time("Il y a 8h")
-                        .type("grade")
-                        .build(),
-                DashboardResponse.ActivityItem.builder()
-                        .text("Classe 4ème B créée")
-                        .time("Hier")
-                        .type("classroom")
-                        .build()
-        );
+        // Construire dynamiquement les activités à partir des dernières entités
+        List<DashboardResponse.ActivityItem> activities = new ArrayList<>();
+
+        // Activités basées sur les derniers bulletins
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.FRENCH);
+        for (int i = 0; i < Math.min(3, recent.size()); i++) {
+            DashboardResponse.BulletinItem b = recent.get(i);
+            String time = b.getDate() != null ? b.getDate() : null;
+            activities.add(DashboardResponse.ActivityItem.builder()
+                    .text("Bulletin de " + (b.getStudent() == null ? "un élève" : b.getStudent()))
+                    .time(time)
+                    .type("bulletin")
+                    .build());
+        }
+
+        // Nouveaux élèves récents
+        var recentStudents = studentRepository.findAll(PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent();
+        for (var s : recentStudents) {
+            String time = s.getCreatedAt() != null ? s.getCreatedAt().format(dtf) : null;
+            String name = (s.getNom() == null ? "Élève" : s.getNom()) + (s.getPrenom() != null ? " " + s.getPrenom() : "");
+            activities.add(DashboardResponse.ActivityItem.builder()
+                    .text("Nouvel élève ajouté : " + name)
+                    .time(time)
+                    .type("student")
+                    .build());
+        }
+
+        // Nouvelles classes récentes
+        var recentClasses = classroomRepository.findAll(PageRequest.of(0, 2, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent();
+        for (var c : recentClasses) {
+            String time = c.getCreatedAt() != null ? c.getCreatedAt().format(dtf) : null;
+            String nom = c.getNom() != null ? c.getNom() : "Classe";
+            activities.add(DashboardResponse.ActivityItem.builder()
+                    .text("Classe créée : " + nom)
+                    .time(time)
+                    .type("classroom")
+                    .build());
+        }
 
         return DashboardResponse.builder()
                 .stats(DashboardResponse.Stats.builder()

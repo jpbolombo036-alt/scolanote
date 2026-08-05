@@ -323,15 +323,16 @@ public class AuthController {
                 .map(ur -> ur.getRole().getNom())
                 .toList();
 
-        return ResponseEntity.ok(CurrentUserResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .enabled(user.isEnabled())
-                .email(user.getEmail())
-                .telephone(user.getTelephone())
-                .roles(roles)
-                .schoolId(user.getSchoolId())
-                .build());
+        CurrentUserResponse currentUserResponse = new CurrentUserResponse();
+        currentUserResponse.setId(user.getId());
+        currentUserResponse.setUsername(user.getUsername());
+        currentUserResponse.setEnabled(user.isEnabled());
+        currentUserResponse.setEmail(user.getEmail());
+        currentUserResponse.setTelephone(user.getTelephone());
+        currentUserResponse.setRoles(roles);
+        currentUserResponse.setSchoolId(user.getSchoolId());
+
+        return ResponseEntity.ok(currentUserResponse);
     }
 
     @PutMapping("/me")
@@ -371,15 +372,16 @@ public class AuthController {
                 .map(ur -> ur.getRole().getNom())
                 .toList();
 
-        return ResponseEntity.ok(CurrentUserResponse.builder()
-                .id(saved.getId())
-                .username(saved.getUsername())
-                .enabled(saved.isEnabled())
-                .email(saved.getEmail())
-                .telephone(saved.getTelephone())
-                .roles(roles)
-                .schoolId(saved.getSchoolId())
-                .build());
+        CurrentUserResponse currentUserResponse = new CurrentUserResponse();
+        currentUserResponse.setId(saved.getId());
+        currentUserResponse.setUsername(saved.getUsername());
+        currentUserResponse.setEnabled(saved.isEnabled());
+        currentUserResponse.setEmail(saved.getEmail());
+        currentUserResponse.setTelephone(saved.getTelephone());
+        currentUserResponse.setRoles(roles);
+        currentUserResponse.setSchoolId(saved.getSchoolId());
+
+        return ResponseEntity.ok(currentUserResponse);
     }
 
     @PostMapping("/change-password")

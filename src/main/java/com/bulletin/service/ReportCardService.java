@@ -212,6 +212,83 @@ public class ReportCardService {
                 .toList();
     }
 
+        @Transactional
+        public ReportCardResponse generateForEnrollment(Long enrollmentId, Long periodId) {
+        Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
+            .orElseThrow(() -> new ResourceNotFoundException("Inscription non trouvée avec l'ID: " + enrollmentId));
+        Period period = periodRepository.findById(periodId)
+            .orElseThrow(() -> new ResourceNotFoundException("Période non trouvée avec l'ID: " + periodId));
+
+        // permission check (reuses existing assertion for classroom-level access)
+        assertCanGenerateBulletins(enrollment.getClassroom());
+
+        // --- Calcul des résultats pour l'inscription ---
+        List<SubjectResult> subjectResults = calculator.computeSubjectResults(enrollment, period);
+        BulletinCalculatorService.GlobalResult global = calculator.computeGlobalResult(subjectResults);
+
+        // Pour calculer les rangs, charge les inscriptions de la classe et calcule en mémoire
+        List<Enrollment> enrollments = enrollmentRepository.findByClassroomId(enrollment.getClassroom().getId());
+        Map<Long, List<SubjectResult>> resultsByEnrollment = calculator.computeClassSubjectResults(enrollment.getClassroom(), period, enrollments);
+        Map<Long, BigDecimal> percentagesByEnrollment = enrollments.stream()
+            .collect(Collectors.toMap(Enrollment::getId, e -> calculator.computeGlobalResult(resultsByEnrollment.getOrDefault(e.getId(), List.of())).getPourcentage()));
+        List<Long> ranking = percentagesByEnrollment.entrySet().stream()
+            .sorted(Map.Entry.<Long, BigDecimal>comparingByValue().reversed())
+            .map(Map.Entry::getKey)
+            .toList();
+        Map<Long, Map<Long, Integer>> subjectRanksByEnrollment = computeSubjectRanks(enrollments, resultsByEnrollment);
+
+        int rang = ranking.indexOf(enrollment.getId()) + 1;
+        String mention = resolveMention(global.getPourcentage());
+        String decision = global.getPourcentage().compareTo(decisionAdmis) >= 0 ? "ADMIS" : "ECHEC";
+
+        // Supprime les bulletins existants pour cette inscription+période
+        reportCardRepository.findByEnrollmentId(enrollment.getId()).stream()
+            .filter(rc -> rc.getPeriod() != null && rc.getPeriod().getId().equals(period.getId()))
+            .forEach(rc -> {
+                reportCardDetailRepository.findByReportCardId(rc.getId()).forEach(reportCardDetailRepository::delete);
+                rc.setDeletedAt(java.time.LocalDateTime.now());
+                reportCardRepository.save(rc);
+            });
+
+        long absences = attendanceRepository.countByStudentIdAndPeriodIdAndRetardFalseAndAbsenceTrue(enrollment.getStudent().getId(), period.getId());
+        long retards = attendanceRepository.countByStudentIdAndPeriodIdAndRetardTrueAndAbsenceFalse(enrollment.getStudent().getId(), period.getId());
+        Discipline discipline = disciplineRepository.findByStudentIdAndPeriodId(enrollment.getStudent().getId(), period.getId());
+
+        ReportCard reportCard = ReportCard.builder()
+            .enrollment(enrollment)
+            .period(period)
+            .pourcentage(global.getPourcentage())
+            .totalPoints(global.getTotalPoints())
+            .maximumPoints(global.getMaximumPoints())
+            .rang(rang)
+            .mention(mention)
+            .decision(decision)
+            .totalAbsences((int) absences)
+            .totalRetards((int) retards)
+            .conduite(discipline != null ? discipline.getConduite() : null)
+            .application(discipline != null ? discipline.getApplication() : null)
+            .build();
+        reportCard = reportCardRepository.save(reportCard);
+
+        Map<Long, Integer> subjectRanks = subjectRanksByEnrollment.getOrDefault(enrollment.getId(), Map.of());
+        for (SubjectResult sr : subjectResults) {
+            ReportCardDetail detail = ReportCardDetail.builder()
+                .reportCard(reportCard)
+                .subject(sr.getSubject())
+                .coefficient(sr.getCoefficient())
+                .moyenne(sr.getMoyenne())
+                .points(sr.getPoints())
+                .maximum(sr.getMaximum())
+                .pourcentage(sr.getPourcentage())
+                .rangMatiere(subjectRanks.get(sr.getSubject().getId()))
+                .observation(null)
+                .build();
+            reportCardDetailRepository.save(detail);
+        }
+
+        return toResponse(reportCard);
+        }
+
     @Transactional(readOnly = true)
     public Page<ReportCardResponse> getAccessibleReportCards(Pageable pageable) {
         if (securityUtils.isSuperAdmin()) {

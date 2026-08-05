@@ -45,6 +45,17 @@ public class ReportCardController {
         return ResponseEntity.ok(reportCardService.getByEnrollment(inscriptionId));
     }
 
+    @PostMapping("/inscription/{inscriptionId}/generer")
+    @Operation(summary = "Générer le bulletin d'une inscription", description = "Génère le bulletin calculé pour une inscription (élève) et une période. Body: { \"periodId\": 123 }")
+    public ResponseEntity<ReportCardResponse> generateForEnrollment(@PathVariable Long inscriptionId, @RequestBody java.util.Map<String, Long> body) {
+        Long periodId = body == null ? null : body.get("periodId");
+        if (periodId == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.BAD_REQUEST).build();
+        }
+        ReportCardResponse response = reportCardService.generateForEnrollment(inscriptionId, periodId);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(response);
+    }
+
     @GetMapping("/trimestre/{trimestreId}")
     @Operation(summary = "Bulletins par trimestre", description = "Retourne tous les bulletins d'un trimestre")
     public ResponseEntity<List<ReportCardResponse>> getByTerm(@PathVariable Long trimestreId) {

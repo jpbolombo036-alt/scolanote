@@ -318,6 +318,7 @@ public class AuthController {
                 .filter(ur -> ur.getUser() != null && ur.getUser().getId().equals(user.getId()) && ur.getRole() != null)
                 .map(ur -> ur.getRole().getNom())
                 .toList();
+        List<String> permissions = loadPermissionsSafely(user.getId());
 
         CurrentUserResponse currentUserResponse = new CurrentUserResponse();
         currentUserResponse.setId(user.getId());
@@ -326,6 +327,7 @@ public class AuthController {
         currentUserResponse.setEmail(user.getEmail());
         currentUserResponse.setTelephone(user.getTelephone());
         currentUserResponse.setRoles(roles);
+        currentUserResponse.setPermissions(permissions);
         currentUserResponse.setSchoolId(user.getSchoolId());
 
         return ResponseEntity.ok(currentUserResponse);
@@ -367,6 +369,7 @@ public class AuthController {
                 .filter(ur -> ur.getUser() != null && ur.getUser().getId().equals(saved.getId()) && ur.getRole() != null)
                 .map(ur -> ur.getRole().getNom())
                 .toList();
+        List<String> permissions = loadPermissionsSafely(saved.getId());
 
         CurrentUserResponse currentUserResponse = new CurrentUserResponse();
         currentUserResponse.setId(saved.getId());
@@ -375,6 +378,7 @@ public class AuthController {
         currentUserResponse.setEmail(saved.getEmail());
         currentUserResponse.setTelephone(saved.getTelephone());
         currentUserResponse.setRoles(roles);
+        currentUserResponse.setPermissions(permissions);
         currentUserResponse.setSchoolId(saved.getSchoolId());
 
         return ResponseEntity.ok(currentUserResponse);

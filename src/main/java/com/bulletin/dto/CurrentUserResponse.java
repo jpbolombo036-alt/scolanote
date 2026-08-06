@@ -18,5 +18,6 @@ public class CurrentUserResponse {
     private String email;
     private String telephone;
     private List<String> roles;
+    private List<String> permissions;
     private Long schoolId;
 }

@@ -10,6 +10,8 @@ import com.bulletin.mapper.TeacherMapper;
 import com.bulletin.repository.TeacherRepository;
 import com.bulletin.repository.UserTeacherRepository;
 import com.bulletin.security.SecurityUtils;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

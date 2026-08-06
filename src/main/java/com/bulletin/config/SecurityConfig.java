@@ -131,14 +131,21 @@ public class SecurityConfig {
         boolean localProfile = environment.acceptsProfiles(Profiles.of("local"));
         if (origins.isEmpty() || origins.contains("*")) {
             if (!localProfile) {
-                log.warn("CORS_ALLOWED_ORIGINS is not configured; CORS will be restricted to same-origin requests. Configure CORS_ALLOWED_ORIGINS in production.");
-                configuration.addAllowedOriginPattern("same-origin");
+                log.warn("CORS_ALLOWED_ORIGINS is not configured or set to wildcard; using default production origins.");
+                configuration.setAllowedOriginPatterns(List.of(
+                        "https://app.gestbulletin.com",
+                        "https://www.gestbulletin.com",
+                        "https://scolanote.vercel.app",
+                        "https://*.vercel.app"
+                ));
             } else {
                 configuration.addAllowedOriginPattern("*");
             }
         } else {
-            // Utilise des patterns pour supporter les URLs exactes ET les wildcard de sous-domaines
-            // (ex: https://scolanote.vercel.app et https://scolanote-*.vercel.app pour les previews Vercel)
+            if (!origins.contains("https://app.gestbulletin.com")) {
+                origins.add("https://app.gestbulletin.com");
+                log.info("CORS: added missing origin https://app.gestbulletin.com to allowed patterns");
+            }
             configuration.setAllowedOriginPatterns(origins);
             log.info("CORS configured with allowed origin patterns: {}", origins);
         }

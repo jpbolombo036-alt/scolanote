@@ -12,6 +12,7 @@ import com.bulletin.repository.UserRepository;
 import com.bulletin.repository.UserRoleRepository;
 import com.bulletin.security.JwtTokenProvider;
 import com.bulletin.security.SecurityUtils;
+import com.bulletin.security.UserPrincipal;
 import com.bulletin.security.UserPrincipalService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -381,6 +382,7 @@ public class AuthController {
         return ResponseEntity.ok(currentUserResponse);
     }
 
+    @Transactional
     @PostMapping("/change-password")
     @Operation(summary = "Changer le mot de passe", description = "Met à jour le mot de passe de l'utilisateur connecté en vérifiant le mot de passe actuel")
     public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
@@ -389,9 +391,25 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        String username = authentication.getName();
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        Object principal = authentication.getPrincipal();
+        Long userId;
+        String username;
+        if (principal instanceof UserPrincipal userPrincipal) {
+            userId = userPrincipal.getId();
+            username = userPrincipal.getUsername();
+        } else {
+            username = authentication.getName();
+            userId = null;
+        }
+
+        User user;
+        if (userId != null) {
+            user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé avec l'ID: " + userId));
+        } else {
+            user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé: " + username));
+        }
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

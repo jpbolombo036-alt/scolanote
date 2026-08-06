@@ -142,10 +142,7 @@ public class SecurityConfig {
                 configuration.addAllowedOriginPattern("*");
             }
         } else {
-            if (!origins.contains("https://app.gestbulletin.com")) {
-                origins.add("https://app.gestbulletin.com");
-                log.info("CORS: added missing origin https://app.gestbulletin.com to allowed patterns");
-            }
+            
             if (!origins.contains("https://www.gestbulletin.com")) {
                 origins.add("https://www.gestbulletin.com");
                 log.info("CORS: added missing origin https://www.gestbulletin.com to allowed patterns");

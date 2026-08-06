@@ -48,34 +48,29 @@ public class TeacherService {
         Teacher teacher = teacherMapper.toEntity(request);
         teacher.setSchoolId(schoolId);
         Teacher saved = teacherRepository.save(teacher);
-        log.info("Professeur créé: {}", saved.getId());
+        log.info("Professeur créé: id={} email={} nom={}", saved.getId(), saved.getEmail(), saved.getNom());
 
-        // Un professeur EST un utilisateur : on crée automatiquement son compte (rôle ENSEIGNANT)
-        // + le lien UserTeacher. L'email est obligatoire (validé dans TeacherRequest).
-        provisionTeacherAccount(saved);
+        AccountProvisioningResult provisioning = provisionTeacherAccount(saved);
 
-        return teacherMapper.toResponse(saved);
+        TeacherResponse response = teacherMapper.toResponse(saved);
+        response.setAccountCreated(provisioning.accountCreated);
+        response.setAccountUsername(provisioning.username);
+        response.setAccountLoginHint(provisioning.loginHint);
+        return response;
     }
 
-    /**
-     * Crée le compte utilisateur du professeur (rôle ENSEIGNANT) + le lien UserTeacher.
-     * Le compte : username = email, mot de passe par défaut (changement obligatoire à la 1ère connexion).
-     * Un e-mail de bienvenue est envoyé (asynchrone). N'impacte jamais la création du professeur.
-     */
-    private void provisionTeacherAccount(Teacher teacher) {
+    private AccountProvisioningResult provisionTeacherAccount(Teacher teacher) {
         try {
             if (teacher.getEmail() == null || teacher.getEmail().isBlank()) {
-                return; // sécurité : ne devrait pas arriver (email obligatoire dans TeacherRequest)
+                return AccountProvisioningResult.failed("Email manquant");
             }
             String fullName = teacher.getNom()
                     + (teacher.getPostnom() != null ? " " + teacher.getPostnom() : "")
                     + (teacher.getPrenom() != null ? " " + teacher.getPrenom() : "");
 
-            // 1. Créer le compte utilisateur (rôle ENSEIGNANT) + e-mail de bienvenue
             User user = accountProvisioningService.provisionAccount(
                     teacher.getEmail(), "ENSEIGNANT", teacher.getSchoolId(), fullName.trim());
 
-            // 2. Créer le lien UserTeacher (si pas déjà existant)
             boolean linkExists = userTeacherRepository.existsByUser_IdAndTeacher_Id(user.getId(), teacher.getId());
             if (!linkExists) {
                 userTeacherRepository.save(UserTeacher.builder()
@@ -84,9 +79,38 @@ public class TeacherService {
                         .build());
                 log.info("Lien user-professeur créé automatiquement: user={} teacher={}", user.getId(), teacher.getId());
             }
+
+            String hint = "Connectez-vous avec l'email : " + user.getEmail();
+            return AccountProvisioningResult.success(user.getUsername(), user.getEmail(), hint);
         } catch (Exception e) {
-            // La création du compte ne doit JAMAIS faire échouer la création du professeur.
-            log.warn("Impossible de provisionner le compte du professeur {} : {}", teacher.getId(), e.getMessage());
+            log.error("Impossible de provisionner le compte du professeur {} : {}", teacher.getId(), e.getMessage(), e);
+            String hint = "Compte non créé : " + e.getMessage();
+            return AccountProvisioningResult.failed(hint);
+        }
+    }
+
+    @Data
+    @AllArgsConstructor
+    private static class AccountProvisioningResult {
+        boolean accountCreated;
+        String username;
+        String email;
+        String loginHint;
+
+        static AccountProvisioningResult success(String username, String email, String loginHint) {
+            AccountProvisioningResult r = new AccountProvisioningResult();
+            r.setAccountCreated(true);
+            r.setUsername(username);
+            r.setEmail(email);
+            r.setLoginHint(loginHint);
+            return r;
+        }
+
+        static AccountProvisioningResult failed(String loginHint) {
+            AccountProvisioningResult r = new AccountProvisioningResult();
+            r.setAccountCreated(false);
+            r.setLoginHint(loginHint);
+            return r;
         }
     }
 

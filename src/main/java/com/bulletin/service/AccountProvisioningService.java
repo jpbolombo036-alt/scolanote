@@ -63,7 +63,7 @@ public class AccountProvisioningService {
         if (existing.isPresent()) {
             User user = existing.get();
             ensureRole(user, roleName);
-            log.info("Compte existant réutilisé pour l'email {} (userId={})", email, user.getId());
+            log.warn("Compte existant réutilisé pour l'email {} (userId={}) — mot de passe NON réinitialisé (utilisateur doit utiliser son mot de passe actuel)", email, user.getId());
             return user;
         }
 
@@ -83,7 +83,7 @@ public class AccountProvisioningService {
         // E-mail de bienvenue (asynchrone — n'affecte jamais la réponse)
         sendWelcomeEmail(user, recipientName);
 
-        log.info("Compte provisionné pour l'email {} avec le rôle {} (userId={})", email, roleName, user.getId());
+        log.info("Compte provisionné pour l'email {} avec le rôle {} (userId={}) — mot de passe temporaire: {}", email, roleName, user.getId(), DEFAULT_PASSWORD);
         return user;
     }
 

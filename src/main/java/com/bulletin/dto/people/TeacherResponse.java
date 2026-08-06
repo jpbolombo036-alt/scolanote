@@ -23,4 +23,8 @@ public class TeacherResponse {
     private String specialite;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    private Boolean accountCreated;
+    private String accountUsername;
+    private String accountLoginHint;
 }

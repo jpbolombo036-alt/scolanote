@@ -63,7 +63,7 @@ app:
     # Origines autorisées (séparées par des virgules). Les patterns wildcard sont supportés
     # (ex: https://scolanote-*.vercel.app pour les previews Vercel).
     # Défaut: frontend Vercel + localhost dev. Surchargé par CORS_ALLOWED_ORIGINS dans Railway.
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://scolanote.vercel.app,https://www.gestbulletin.com,https://scolanote-frontend.vercel.app,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://scolanote.vercel.app,https://www.gestbulletin.com,https://app.gestbulletin.com,https://scolanote-frontend.vercel.app,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173}
 
   jwt:
     secret: ${JWT_SECRET}
@@ -76,7 +76,7 @@ app:
     admin-init-key: ${ADMIN_INIT_KEY}
 
   frontend:
-    url: ${FRONTEND_URL:http://localhost:3000}
+    url: ${FRONTEND_URL:https://app.gestbulletin.com}
 
   bulletin:
     mention:

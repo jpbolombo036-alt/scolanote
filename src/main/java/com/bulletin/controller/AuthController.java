@@ -225,11 +225,7 @@ public class AuthController {
             }
 
             if (existingUser.isPasswordResetRequired()) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(ApiError.builder()
-                                .code("PASSWORD_RESET_REQUIRED")
-                                .message("Réinitialisation du mot de passe requise. Utilisez le lien de réinitialisation pour définir un nouveau mot de passe.")
-                                .build());
+                log.info("Connexion autorisée pour l'utilisateur {} (réinitialisation de mot de passe requise)", existingUser.getUsername());
             }
 
             // Charge rôles + permissions de l'utilisateur.
@@ -253,6 +249,7 @@ public class AuthController {
                             .roles(roles)
                             .schoolId(existingUser.getSchoolId())
                             .permissions(permissions)
+                            .passwordResetRequired(existingUser.isPasswordResetRequired())
                             .build())
                     .build());
 

@@ -3,21 +3,25 @@ package com.bulletin.controller.admin;
 import com.bulletin.service.admin.AdminDataService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
-@RequiredArgsConstructor
 @Tag(name = "Admin", description = "Rapports & Données: rapports, exports, imports, sauvegardes")
 public class AdminDataController {
 
     private final AdminDataService adminDataService;
+
+    public AdminDataController(AdminDataService adminDataService) {
+        this.adminDataService = adminDataService;
+    }
 
     @GetMapping("/rapports")
     @Operation(summary = "Liste des rapports disponibles")
@@ -45,6 +49,20 @@ public class AdminDataController {
     @GetMapping("/exports")
     public ResponseEntity<List<Map<String, Object>>> listExports() {
         return ResponseEntity.ok(adminDataService.listExports());
+    }
+
+    @GetMapping("/exports/{exportId}")
+    public ResponseEntity<byte[]> downloadExport(@PathVariable String exportId) {
+        try {
+            var file = adminDataService.downloadExport(exportId);
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.parseMediaType(file.contentType));
+            headers.setContentDisposition(org.springframework.http.ContentDisposition.attachment().filename(file.filename).build());
+            headers.setContentLength(file.content.length);
+            return ResponseEntity.ok().headers(headers).body(file.content);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage(), ex);
+        }
     }
 
     @PostMapping("/imports")

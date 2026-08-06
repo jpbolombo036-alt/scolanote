@@ -17,6 +17,8 @@ public interface AdminDataService {
 
     List<Map<String, Object>> listExports();
 
+    ReportFile downloadExport(String exportId);
+
     Map<String, Object> importData(MultipartFile file);
 
     Map<String, Object> createBackup();

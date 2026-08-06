@@ -100,19 +100,11 @@ public class TeacherService {
         String loginHint;
 
         static AccountProvisioningResult success(String username, String email, String loginHint) {
-            AccountProvisioningResult r = new AccountProvisioningResult();
-            r.setAccountCreated(true);
-            r.setUsername(username);
-            r.setEmail(email);
-            r.setLoginHint(loginHint);
-            return r;
+            return new AccountProvisioningResult(true, username, email, loginHint);
         }
 
         static AccountProvisioningResult failed(String loginHint) {
-            AccountProvisioningResult r = new AccountProvisioningResult();
-            r.setAccountCreated(false);
-            r.setLoginHint(loginHint);
-            return r;
+            return new AccountProvisioningResult(false, null, null, loginHint);
         }
     }
 

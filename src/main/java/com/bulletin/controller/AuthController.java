@@ -286,10 +286,7 @@ public class AuthController {
      */
     private List<String> loadRolesSafely(Long userId) {
         try {
-            return userRoleRepository.findAll().stream()
-                    .filter(ur -> ur.getUser() != null && ur.getUser().getId().equals(userId) && ur.getRole() != null)
-                    .map(ur -> ur.getRole().getNom())
-                    .toList();
+            return userRoleRepository.findRoleNamesByUserId(userId);
         } catch (Exception e) {
             log.warn("Impossible de charger les rôles de l'utilisateur {} (login continue): {}", userId, e.getMessage());
             return List.of();
@@ -584,3 +581,4 @@ public class AuthController {
                 .anyMatch(auth -> "ROLE_ADMIN".equals(auth.getAuthority()) || "ROLE_SUPER_ADMIN".equals(auth.getAuthority()));
     }
 }
+

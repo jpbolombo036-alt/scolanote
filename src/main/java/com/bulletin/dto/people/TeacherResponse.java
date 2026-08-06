@@ -25,6 +25,7 @@ public class TeacherResponse {
     private LocalDateTime updatedAt;
 
     private Boolean accountCreated;
+    private Long accountUserId;
     private String accountUsername;
     private String accountLoginHint;
 }

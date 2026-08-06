@@ -56,6 +56,7 @@ public class TeacherService {
 
         TeacherResponse response = teacherMapper.toResponse(saved);
         response.setAccountCreated(provisioning.accountCreated);
+        response.setAccountUserId(provisioning.userId);
         response.setAccountUsername(provisioning.username);
         response.setAccountLoginHint(provisioning.loginHint);
         return response;
@@ -83,7 +84,7 @@ public class TeacherService {
             }
 
             String hint = "Connectez-vous avec l'email : " + user.getEmail();
-            return AccountProvisioningResult.success(user.getUsername(), user.getEmail(), hint);
+            return AccountProvisioningResult.success(user.getId(), user.getUsername(), user.getEmail(), hint);
         } catch (Exception e) {
             log.error("Impossible de provisionner le compte du professeur {} : {}", teacher.getId(), e.getMessage(), e);
             String hint = "Compte non créé : " + e.getMessage();
@@ -95,16 +96,17 @@ public class TeacherService {
     @AllArgsConstructor
     private static class AccountProvisioningResult {
         boolean accountCreated;
+        Long userId;
         String username;
         String email;
         String loginHint;
 
-        static AccountProvisioningResult success(String username, String email, String loginHint) {
-            return new AccountProvisioningResult(true, username, email, loginHint);
+        static AccountProvisioningResult success(Long userId, String username, String email, String loginHint) {
+            return new AccountProvisioningResult(true, userId, username, email, loginHint);
         }
 
         static AccountProvisioningResult failed(String loginHint) {
-            return new AccountProvisioningResult(false, null, null, loginHint);
+            return new AccountProvisioningResult(false, null, null, null, loginHint);
         }
     }
 

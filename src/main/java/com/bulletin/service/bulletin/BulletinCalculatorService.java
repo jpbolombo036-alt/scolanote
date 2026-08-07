@@ -26,6 +26,7 @@ public class BulletinCalculatorService {
     private final GradeRepository gradeRepository;
     private final AssessmentTypeRepository assessmentTypeRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final TrimesterRepository trimesterRepository;
 
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
 

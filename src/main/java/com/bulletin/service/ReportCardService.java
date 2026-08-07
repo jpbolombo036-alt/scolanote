@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -331,8 +332,8 @@ public class ReportCardService {
 
         // Vérifier les permissions pour générer les bulletins annuels
         securityUtils.assertPermission("BULLETIN_ANNUEL_GENERER"); // Nouvelle permission
-        securityUtils.assertSchoolAccess(academicYear.getSchoolId());
-        securityUtils.assertSchoolAccess(classroom.getSchoolId());
+        securityUtils.assertSchoolAccess(academicYear.getSchool() != null ? academicYear.getSchool().getId() : null);
+        securityUtils.assertSchoolAccess(classroom.getAcademicYear() != null && classroom.getAcademicYear().getSchool() != null ? classroom.getAcademicYear().getSchool().getId() : null);
 
         List<Enrollment> enrollments = enrollmentRepository.findByClassroomId(classroom.getId());
         List<AcademicYearReportCardResponse> responses = new java.util.ArrayList<>();
@@ -353,12 +354,12 @@ public class ReportCardService {
             String annualDecision = annualGlobalResult.getPourcentage().compareTo(decisionAdmis) >= 0 ? "ADMIS" : "ECHEC";
 
             // Agrégation des absences et retards sur l'année
-            long totalAbsences = enrollment.getStudent().getEnrollments().stream()
+            long totalAbsences = enrollmentRepository.findByStudentId(enrollment.getStudent().getId()).stream()
                     .flatMap(e -> attendanceRepository.findByStudentId(e.getStudent().getId()).stream())
                     .filter(a -> a.getPeriod() != null && a.getPeriod().getTrimester() != null && a.getPeriod().getTrimester().getAcademicYear().getId().equals(academicYear.getId()))
                     .filter(Attendance::isAbsence)
                     .count();
-            long totalRetards = enrollment.getStudent().getEnrollments().stream()
+            long totalRetards = enrollmentRepository.findByStudentId(enrollment.getStudent().getId()).stream()
                     .flatMap(e -> attendanceRepository.findByStudentId(e.getStudent().getId()).stream())
                     .filter(a -> a.getPeriod() != null && a.getPeriod().getTrimester() != null && a.getPeriod().getTrimester().getAcademicYear().getId().equals(academicYear.getId()))
                     .filter(Attendance::isRetard)
@@ -371,7 +372,7 @@ public class ReportCardService {
 
             // Supprimer l'ancien bulletin annuel s'il existe
             academicYearReportCardRepository.findByEnrollmentIdAndAcademicYearId(enrollment.getId(), academicYear.getId())
-                    .ifPresent(ar -> {
+                    .stream().findFirst().ifPresent(ar -> {
                         academicYearReportCardDetailRepository.findByAcademicYearReportCardId(ar.getId())
                                 .forEach(academicYearReportCardDetailRepository::delete);
                         ar.setDeletedAt(java.time.LocalDateTime.now());

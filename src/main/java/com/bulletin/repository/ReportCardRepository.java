@@ -1,6 +1,7 @@
 package com.bulletin.repository;
 
 import com.bulletin.entity.ReportCard;
+import com.bulletin.entity.Enrollment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -19,6 +20,10 @@ public interface ReportCardRepository extends JpaRepository<ReportCard, Long> {
 
     @EntityGraph(attributePaths = {"enrollment", "enrollment.student", "enrollment.classroom", "enrollment.classroom.academicYear", "enrollment.classroom.academicYear.school", "period"})
     Page<ReportCard> findBySchoolId(Long schoolId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"enrollment", "enrollment.student", "enrollment.classroom", "enrollment.classroom.academicYear", "enrollment.classroom.academicYear.school", "period"})
+    List<ReportCard> findByEnrollmentIn(List<Enrollment> enrollments);
+
 
     @EntityGraph(attributePaths = {"enrollment", "enrollment.student", "enrollment.classroom", "enrollment.classroom.academicYear", "enrollment.classroom.academicYear.school", "period"})
     List<ReportCard> findAll();

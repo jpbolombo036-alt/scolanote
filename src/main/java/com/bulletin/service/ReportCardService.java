@@ -1,6 +1,7 @@
 package com.bulletin.service;
 
 import com.bulletin.dto.bulletin.BulletinGenerateRequest;
+import com.bulletin.dto.bulletin.AcademicYearReportCardResponse;
 import com.bulletin.dto.bulletin.ReportCardDetailResponse;
 import com.bulletin.dto.bulletin.ReportCardResponse;
 import com.bulletin.entity.*;
@@ -10,6 +11,7 @@ import com.bulletin.mapper.ReportCardMapper;
 import com.bulletin.repository.*;
 import com.bulletin.repository.AttendanceRepository;
 import com.bulletin.repository.DisciplineRepository;
+import com.bulletin.repository.UserStudentRepository;
 import com.bulletin.repository.UserTeacherRepository;
 import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.bulletin.BulletinCalculatorService;
@@ -29,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.bulletin.repository.AcademicYearReportCardRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +39,7 @@ import java.util.stream.Collectors;
 public class ReportCardService {
 
     private final ReportCardRepository reportCardRepository;
+    private final AcademicYearReportCardRepository academicYearReportCardRepository;
     private final ReportCardDetailRepository reportCardDetailRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final ClassroomRepository classroomRepository;
@@ -43,6 +47,7 @@ public class ReportCardService {
     private final ReportCardMapper reportCardMapper;
     private final BulletinCalculatorService calculator;
     private final SecurityUtils securityUtils;
+    private final UserStudentRepository userStudentRepository;
     private final UserTeacherRepository userTeacherRepository;
     private final AttendanceRepository attendanceRepository;
     private final DisciplineRepository disciplineRepository;
@@ -311,6 +316,113 @@ public class ReportCardService {
                 .toList();
     }
 
+    @Transactional
+    public List<AcademicYearReportCardResponse> generateAcademicYearBulletins(Long academicYearId, Long classroomId) {
+        AcademicYear academicYear = academicYearRepository.findById(academicYearId)
+                .orElseThrow(() -> new ResourceNotFoundException("Année scolaire non trouvée avec l'ID: " + academicYearId));
+        Classroom classroom = classroomRepository.findById(classroomId)
+                .orElseThrow(() -> new ResourceNotFoundException("Classe non trouvée avec l'ID: " + classroomId));
+
+        // Vérifier les permissions pour générer les bulletins annuels
+        securityUtils.assertPermission("BULLETIN_ANNUEL_GENERER"); // Nouvelle permission
+        securityUtils.assertSchoolAccess(academicYear.getSchoolId());
+        securityUtils.assertSchoolAccess(classroom.getSchoolId());
+
+        List<Enrollment> enrollments = enrollmentRepository.findByClassroomId(classroom.getId());
+        List<AcademicYearReportCardResponse> responses = new java.util.ArrayList<>();
+
+        // Pour chaque élève, calculer le bulletin annuel
+        for (Enrollment enrollment : enrollments) {
+            // Calcul des résultats par matière pour l'année entière
+            List<SubjectResult> annualSubjectResults = calculator.computeAcademicYearSubjectResults(enrollment, academicYear);
+            BulletinCalculatorService.GlobalResult annualGlobalResult = calculator.computeGlobalResult(annualSubjectResults);
+
+            // Calcul du rang général annuel
+            // Ceci est une version simplifiée. Pour un rang précis, il faudrait calculer les pourcentages annuels
+            // de tous les élèves de la classe et les trier.
+            // Pour l'exemple, nous allons juste prendre un rang temporaire ou le recalculer plus tard.
+            // TODO: Implémenter le calcul du rang annuel global de manière plus robuste.
+            int annualRang = 1; // Placeholder
+            String annualMention = resolveMention(annualGlobalResult.getPourcentage());
+            String annualDecision = annualGlobalResult.getPourcentage().compareTo(decisionAdmis) >= 0 ? "ADMIS" : "ECHEC";
+
+            // Agrégation des absences et retards sur l'année
+            long totalAbsences = enrollment.getStudent().getEnrollments().stream()
+                    .flatMap(e -> attendanceRepository.findByStudentId(e.getStudent().getId()).stream())
+                    .filter(a -> a.getPeriod() != null && a.getPeriod().getTrimester() != null && a.getPeriod().getTrimester().getAcademicYear().getId().equals(academicYear.getId()))
+                    .filter(Attendance::isAbsence)
+                    .count();
+            long totalRetards = enrollment.getStudent().getEnrollments().stream()
+                    .flatMap(e -> attendanceRepository.findByStudentId(e.getStudent().getId()).stream())
+                    .filter(a -> a.getPeriod() != null && a.getPeriod().getTrimester() != null && a.getPeriod().getTrimester().getAcademicYear().getId().equals(academicYear.getId()))
+                    .filter(Attendance::isRetard)
+                    .count();
+
+            // Agrégation de la conduite et de l'application (simplifié pour l'exemple, pourrait être plus complexe)
+            // Par exemple, prendre la dernière valeur ou la plus fréquente.
+            String conduite = "Satisfaisante"; // Placeholder
+            String application = "Bonne"; // Placeholder
+
+            // Supprimer l'ancien bulletin annuel s'il existe
+            academicYearReportCardRepository.findByEnrollmentIdAndAcademicYearId(enrollment.getId(), academicYear.getId())
+                    .ifPresent(ar -> {
+                        academicYearReportCardDetailRepository.findByAcademicYearReportCardId(ar.getId())
+                                .forEach(academicYearReportCardDetailRepository::delete);
+                        ar.setDeletedAt(java.time.LocalDateTime.now());
+                        academicYearReportCardRepository.save(ar);
+                    });
+
+            AcademicYearReportCard academicYearReportCard = AcademicYearReportCard.builder()
+                    .enrollment(enrollment)
+                    .academicYear(academicYear)
+                    .pourcentage(annualGlobalResult.getPourcentage())
+                    .totalPoints(annualGlobalResult.getTotalPoints())
+                    .maximumPoints(annualGlobalResult.getMaximumPoints())
+                    .rang(annualRang)
+                    .mention(annualMention)
+                    .decision(annualDecision)
+                    .totalAbsences((int) totalAbsences)
+                    .totalRetards((int) totalRetards)
+                    .conduite(conduite)
+                    .application(application)
+                    .dateGeneration(LocalDateTime.now())
+                    .statut(AcademicYearReportCard.Statut.BROUILLON.name())
+                    .build();
+            academicYearReportCard = academicYearReportCardRepository.save(academicYearReportCard);
+
+            for (SubjectResult sr : annualSubjectResults) {
+                // Calcul du rang annuel par matière
+                Integer rangMatiereAnnuel = calculator.computeAcademicYearSubjectRank(enrollment, sr.getSubject(), academicYear);
+
+                AcademicYearReportCardDetail detail = AcademicYearReportCardDetail.builder()
+                        .academicYearReportCard(academicYearReportCard)
+                        .subject(sr.getSubject())
+                        .coefficient(sr.getCoefficient())
+                        .moyenne(sr.getMoyenne())
+                        .points(sr.getPoints())
+                        .maximum(sr.getMaximum())
+                        .pourcentage(sr.getPourcentage())
+                        .rangMatiere(rangMatiereAnnuel)
+                        .observation(sr.getObservation()) // Si des observations agrégées sont possibles
+                        .build();
+                academicYearReportCardDetailRepository.save(detail);
+            }
+
+            log.info("Bulletin annuel généré: enrollment={} academicYear={} pourcentage={} rang={} mention={}",
+                    enrollment.getId(), academicYear.getId(), annualGlobalResult.getPourcentage(), annualRang, annualMention);
+
+            responses.add(toAcademicYearReportCardResponse(academicYearReportCard));
+        }
+
+        return responses;
+    }
+
+    // Méthode de conversion vers DTO pour AcademicYearReportCard
+    private AcademicYearReportCardResponse toAcademicYearReportCardResponse(AcademicYearReportCard reportCard) {
+        // TODO: Implémenter le mapper pour AcademicYearReportCard vers AcademicYearReportCardResponse
+        return new AcademicYearReportCardResponse(); // Placeholder
+    }
+
     private ReportCard findById(Long id) {
         ReportCard reportCard = reportCardRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bulletin non trouvé avec l'ID: " + id));
@@ -418,6 +530,39 @@ public class ReportCardService {
             ranksByEnrollment.put(enrollment.getId(), ranks);
         }
         return ranksByEnrollment;
+    }
+
+    public List<ReportCardResponse> getMyReportCards(Long trimestreId) {
+        Long currentUserId = securityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new SecurityException("Authentification requise");
+        }
+
+        List<UserStudent> links = userStudentRepository.findByUserId(currentUserId);
+        if (links.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> studentIds = links.stream()
+                .map(us -> us.getStudent().getId())
+                .toList();
+
+        List<Enrollment> enrollments = enrollmentRepository.findByStudentIdIn(studentIds);
+        if (enrollments.isEmpty()) {
+            return List.of();
+        }
+
+        List<ReportCard> reportCards = reportCardRepository.findByEnrollmentIn(enrollments);
+
+        if (trimestreId != null) {
+            reportCards = reportCards.stream()
+                    .filter(rc -> rc.getPeriod() != null && rc.getPeriod().getTrimester() != null && rc.getPeriod().getTrimester().getId().equals(trimestreId))
+                    .toList();
+        }
+
+        return reportCards.stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     private void assertCanGenerateBulletins(Classroom classroom) {

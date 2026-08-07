@@ -75,7 +75,7 @@ public class ReportCardController {
     }
 
     @PostMapping("/{id}/pdf")
-    @Operation(summary = "GÃ©nÃ©rer le PDF", description = "GÃ©nÃ¨re le PDF du bulletin et le retourne en tÃ©lÃ©chargement")
+    @Operation(summary = "Générer le PDF", description = "Génère le PDF du bulletin et le retourne en téléchargement")
     public ResponseEntity<byte[]> generatePdf(@PathVariable Long id) {
         try {
             // RÃ©gÃ©nÃ¨re le PDF si absent du stockage (S3 ou local).
@@ -94,5 +94,11 @@ public class ReportCardController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    @GetMapping("/mes-bulletins")
+    @Operation(summary = "Mes bulletins", description = "Retourne les bulletins de l'utilisateur connecté (élève ou parent), optionnellement filtrés par trimestre")
+    public ResponseEntity<List<ReportCardResponse>> getMyReportCards(@RequestParam(required = false) Long trimestreId) {
+        return ResponseEntity.ok(reportCardService.getMyReportCards(trimestreId));
     }
 }

@@ -274,4 +274,103 @@ public class BulletinCalculatorService {
 
         return allAverages.indexOf(studentAverage) + 1;
     }
+
+    /**
+     * Calcule les résultats par matière pour un élève (inscription) sur toute une année scolaire.
+     * Agrège les résultats de toutes les périodes/trimestres.
+     */
+    public List<SubjectResult> computeAcademicYearSubjectResults(Enrollment enrollment, AcademicYear academicYear) {
+        Classroom classroom = enrollment.getClassroom();
+        Student student = enrollment.getStudent();
+
+        // Récupérer tous les trimestres et périodes de l'année scolaire
+        List<Trimester> trimesters = trimesterRepository.findByAcademicYearId(academicYear.getId());
+        List<Period> periods = trimesters.stream()
+                .flatMap(t -> t.getPeriods().stream())
+                .toList();
+
+        // Matières enseignées dans cette classe
+        List<TeachingAssignment> assignments = teachingAssignmentRepository.findByClassroomId(classroom.getId());
+
+        List<SubjectResult> annualResults = new ArrayList<>();
+
+        for (TeachingAssignment assignment : assignments) {
+            Subject subject = assignment.getSubject();
+            Integer subjectCoefficient = resolveSubjectCoefficient(classroom, subject);
+
+            BigDecimal annualWeightedSum = BigDecimal.ZERO;
+            BigDecimal annualCoeffSum = BigDecimal.ZERO;
+            BigDecimal annualMaximum = BigDecimal.ZERO;
+
+            for (Period period : periods) {
+                // Évaluations de cette matière pour cette période
+                List<Assessment> assessments = assessmentRepository
+                        .findByAssignmentId(assignment.getId()).stream()
+                        .filter(a -> a.getPeriod() != null && a.getPeriod().getId().equals(period.getId()))
+                        .toList();
+
+                for (Assessment assessment : assessments) {
+                    BigDecimal evalCoeff = resolveAssessmentCoefficient(assessment);
+                    BigDecimal noteMax = assessment.getNoteMax() != null ? assessment.getNoteMax() : BigDecimal.ZERO;
+
+                    List<Grade> grades = gradeRepository.findByAssessmentId(assessment.getId()).stream()
+                            .filter(g -> g.getStudent() != null && g.getStudent().getId().equals(student.getId()))
+                            .filter(g -> g.getNote() != null)
+                            .toList();
+
+                    BigDecimal studentNote = grades.isEmpty() ? BigDecimal.ZERO : grades.get(0).getNote();
+
+                    annualWeightedSum = annualWeightedSum.add(studentNote.multiply(evalCoeff));
+                    annualCoeffSum = annualCoeffSum.add(evalCoeff);
+                    annualMaximum = annualMaximum.add(noteMax.multiply(BigDecimal.valueOf(subjectCoefficient)));
+                }
+            }
+
+            BigDecimal annualMoyenne = annualCoeffSum.compareTo(BigDecimal.ZERO) > 0
+                    ? annualWeightedSum.divide(annualCoeffSum, 2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+
+            BigDecimal annualPoints = annualMoyenne.multiply(BigDecimal.valueOf(subjectCoefficient));
+            BigDecimal annualPourcentage = annualMaximum.compareTo(BigDecimal.ZERO) > 0
+                    ? annualPoints.divide(annualMaximum, 2, RoundingMode.HALF_UP).multiply(ONE_HUNDRED)
+                    : BigDecimal.ZERO;
+
+            annualResults.add(SubjectResult.builder()
+                    .subject(subject)
+                    .coefficient(subjectCoefficient)
+                    .moyenne(annualMoyenne)
+                    .points(annualPoints)
+                    .maximum(annualMaximum)
+                    .pourcentage(annualPourcentage)
+                    .build());
+        }
+
+        return annualResults;
+    }
+
+    /**
+     * Calcule le rang annuel d'un élève pour une matière donnée.
+     */
+    public Integer computeAcademicYearSubjectRank(Enrollment enrollment, Subject subject, AcademicYear academicYear) {
+        Classroom classroom = enrollment.getClassroom();
+        List<Enrollment> allEnrollments = enrollmentRepository.findByClassroomId(classroom.getId());
+
+        List<BigDecimal> allAnnualAverages = allEnrollments.stream()
+                .map(e -> computeAcademicYearSubjectResults(e, academicYear).stream()
+                        .filter(sr -> sr.getSubject().getId().equals(subject.getId()))
+                        .findFirst()
+                        .map(SubjectResult::getMoyenne)
+                        .orElse(BigDecimal.ZERO)
+                )
+                .sorted(Comparator.reverseOrder())
+                .toList();
+
+        BigDecimal studentAnnualAverage = computeAcademicYearSubjectResults(enrollment, academicYear).stream()
+                .filter(sr -> sr.getSubject().getId().equals(subject.getId()))
+                .findFirst()
+                .map(SubjectResult::getMoyenne)
+                .orElse(BigDecimal.ZERO);
+
+        return allAnnualAverages.indexOf(studentAnnualAverage) + 1;
+    }
 }

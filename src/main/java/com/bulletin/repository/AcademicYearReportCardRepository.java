@@ -8,6 +8,5 @@ import java.util.Optional;
 public interface AcademicYearReportCardRepository extends JpaRepository<AcademicYearReportCard, Long> {
     List<AcademicYearReportCard> findByEnrollmentIdAndAcademicYearId(Long enrollmentId, Long academicYearId);
     List<AcademicYearReportCard> findByAcademicYearId(Long academicYearId);
-    List<AcademicYearReportCard> findBySchoolId(Long schoolId);
     Optional<AcademicYearReportCard> findByEnrollmentIdAndAcademicYearIdAndDeletedAtIsNull(Long enrollmentId, Long academicYearId);
 }

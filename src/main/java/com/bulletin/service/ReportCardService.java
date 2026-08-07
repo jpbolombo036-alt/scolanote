@@ -2,6 +2,7 @@ package com.bulletin.service;
 
 import com.bulletin.dto.bulletin.BulletinGenerateRequest;
 import com.bulletin.dto.bulletin.AcademicYearReportCardResponse;
+import com.bulletin.dto.bulletin.AcademicYearReportCardDetailResponse;
 import com.bulletin.dto.bulletin.ReportCardDetailResponse;
 import com.bulletin.dto.bulletin.ReportCardResponse;
 import com.bulletin.entity.*;
@@ -9,6 +10,9 @@ import com.bulletin.entity.Discipline;
 import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.ReportCardMapper;
 import com.bulletin.repository.*;
+import com.bulletin.repository.AcademicYearRepository;
+import com.bulletin.repository.AcademicYearReportCardDetailRepository;
+import com.bulletin.repository.AcademicYearReportCardRepository;
 import com.bulletin.repository.AttendanceRepository;
 import com.bulletin.repository.DisciplineRepository;
 import com.bulletin.repository.UserStudentRepository;
@@ -40,7 +44,9 @@ public class ReportCardService {
 
     private final ReportCardRepository reportCardRepository;
     private final AcademicYearReportCardRepository academicYearReportCardRepository;
+    private final AcademicYearRepository academicYearRepository;
     private final ReportCardDetailRepository reportCardDetailRepository;
+    private final AcademicYearReportCardDetailRepository academicYearReportCardDetailRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final ClassroomRepository classroomRepository;
     private final PeriodRepository periodRepository;

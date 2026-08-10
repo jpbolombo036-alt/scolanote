@@ -1,6 +1,7 @@
 package com.bulletin.service;
 
 import com.bulletin.dto.bulletin.BulletinGenerateRequest;
+import com.bulletin.mapper.AcademicYearReportCardMapper;
 import com.bulletin.dto.bulletin.AcademicYearReportCardResponse;
 import com.bulletin.dto.bulletin.AcademicYearReportCardDetailResponse;
 import com.bulletin.dto.bulletin.ReportCardDetailResponse;
@@ -53,6 +54,7 @@ public class ReportCardService {
     private final PeriodRepository periodRepository;
     private final ReportCardMapper reportCardMapper;
     private final BulletinCalculatorService calculator;
+    private final AcademicYearReportCardMapper academicYearReportCardMapper; // Injecter le nouveau mapper
     private final SecurityUtils securityUtils;
     private final UserStudentRepository userStudentRepository;
     private final UserTeacherRepository userTeacherRepository;
@@ -397,7 +399,7 @@ public class ReportCardService {
                     .build();
             academicYearReportCard = academicYearReportCardRepository.save(academicYearReportCard);
 
-            for (SubjectResult sr : annualSubjectResults) {
+            for (SubjectResult sr : annualSubjectResults) { // Correction: Utiliser annualSubjectResults
                 // Calcul du rang annuel par matière
                 Integer rangMatiereAnnuel = calculator.computeAcademicYearSubjectRank(enrollment, sr.getSubject(), academicYear);
 
@@ -424,10 +426,8 @@ public class ReportCardService {
         return responses;
     }
 
-    // Méthode de conversion vers DTO pour AcademicYearReportCard
     private AcademicYearReportCardResponse toAcademicYearReportCardResponse(AcademicYearReportCard reportCard) {
-        // TODO: Implémenter le mapper pour AcademicYearReportCard vers AcademicYearReportCardResponse
-        return new AcademicYearReportCardResponse(); // Placeholder
+        return academicYearReportCardMapper.toResponse(reportCard);
     }
 
     private ReportCard findById(Long id) {

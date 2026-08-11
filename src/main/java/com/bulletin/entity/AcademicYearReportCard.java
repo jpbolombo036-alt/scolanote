@@ -84,4 +84,12 @@ public class AcademicYearReportCard extends BaseEntity {
 
     @OneToMany(mappedBy = "academicYearReportCard", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<AcademicYearReportCardDetail> details;
+
+    @Override
+    protected void onCreate() {
+        super.onCreate();
+        if (enrollment != null && enrollment.getStudent() != null && enrollment.getStudent().getSchoolId() != null && schoolId == null) {
+            schoolId = enrollment.getStudent().getSchoolId();
+        }
+    }
 }

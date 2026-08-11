@@ -1,9 +1,13 @@
 package com.bulletin.service.bulletin;
 
+import com.bulletin.dto.bulletin.AcademicYearReportCardDetailResponse;
 import com.bulletin.dto.bulletin.ReportCardDetailResponse;
 import com.bulletin.entity.ReportCard;
+import com.bulletin.entity.AcademicYearReportCard;
 import com.bulletin.repository.ReportCardDetailRepository;
 import com.bulletin.repository.ReportCardRepository;
+import com.bulletin.repository.AcademicYearReportCardDetailRepository;
+import com.bulletin.repository.AcademicYearReportCardRepository;
 import com.bulletin.service.storage.FileStorageService;
 import com.lowagie.text.*;
 import com.lowagie.text.Font;
@@ -27,6 +31,8 @@ public class BulletinPdfService {
     private final ReportCardRepository reportCardRepository;
     private final ReportCardDetailRepository reportCardDetailRepository;
     private final FileStorageService fileStorageService;
+    private final AcademicYearReportCardRepository academicYearReportCardRepository;
+    private final AcademicYearReportCardDetailRepository academicYearReportCardDetailRepository;
 
     @Transactional(readOnly = true)
     public String generatePdf(Long reportCardId) {
@@ -85,7 +91,60 @@ public class BulletinPdfService {
 
     @Transactional
     public String generateAcademicYearPdf(Long academicYearReportCardId) {
-        throw new UnsupportedOperationException("La génération PDF des bulletins annuels n'est pas encore implémentée");
+        AcademicYearReportCard reportCard = academicYearReportCardRepository.findById(academicYearReportCardId)
+                .orElseThrow(() -> new IllegalArgumentException("Bulletin annuel non trouvé: " + academicYearReportCardId));
+
+        List<AcademicYearReportCardDetailResponse> details = academicYearReportCardDetailRepository
+                .findByAcademicYearReportCardId(academicYearReportCardId).stream()
+                .map(d -> AcademicYearReportCardDetailResponse.builder()
+                        .id(d.getId())
+                        .subjectId(d.getSubject() != null ? d.getSubject().getId() : null)
+                        .subjectNom(d.getSubject() != null ? d.getSubject().getNom() : null)
+                        .subjectCode(d.getSubject() != null ? d.getSubject().getCode() : null)
+                        .coefficient(d.getCoefficient())
+                        .moyenne(d.getMoyenne())
+                        .rangMatiere(d.getRangMatiere())
+                        .points(d.getPoints())
+                        .maximum(d.getMaximum())
+                        .pourcentage(d.getPourcentage())
+                        .appreciation(d.getObservation())
+                        .moyenneT1(d.getMoyenneT1())
+                        .moyenneT2(d.getMoyenneT2())
+                        .moyenneT3(d.getMoyenneT3())
+                        .moyenneExamen(d.getMoyenneExamen())
+                        .build())
+                .sorted((a, b) -> {
+                    String nomA = a.getSubjectNom() == null ? "" : a.getSubjectNom();
+                    String nomB = b.getSubjectNom() == null ? "" : b.getSubjectNom();
+                    return nomA.compareTo(nomB);
+                })
+                .toList();
+
+        try {
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+            Document document = new Document(PageSize.A4, 20, 20, 20, 20);
+            PdfWriter.getInstance(document, buffer);
+            document.open();
+
+            addAnnualHeader(document, reportCard);
+            addAnnualStudentInfo(document, reportCard);
+            addAnnualGradesTable(document, details);
+            addAnnualSummary(document, reportCard);
+            addSignatures(document);
+
+            document.close();
+
+            String reference = fileStorageService.save(academicYearReportCardId, buffer.toByteArray());
+            reportCard.setPdfUrl(reference);
+            academicYearReportCardRepository.save(reportCard);
+
+            log.info("PDF annuel généré pour le bulletin {}: {}", academicYearReportCardId, reference);
+            return reference;
+        } catch (Exception e) {
+            log.error("Erreur lors de la génération du PDF annuel", e);
+            throw new RuntimeException("Échec de la génération du PDF annuel", e);
+        }
     }
 
     /** Indique si le PDF existe déjà dans le stockage (S3 ou local). */
@@ -250,5 +309,120 @@ public class BulletinPdfService {
 
     private void addField(Document document, String label, String value) throws Exception {
         document.add(new Paragraph(label + ": " + value));
+    }
+
+    private void addAnnualHeader(Document document, AcademicYearReportCard reportCard) throws Exception {
+        Font titleFont = new Font(Font.HELVETICA, 16, Font.BOLD);
+        Font subtitleFont = new Font(Font.HELVETICA, 12, Font.NORMAL);
+
+        Paragraph title = new Paragraph("BULLETIN ANNUEL", titleFont);
+        title.setAlignment(Element.ALIGN_CENTER);
+        document.add(title);
+
+        document.add(new Paragraph(" "));
+
+        String schoolName = reportCard.getEnrollment() != null
+                && reportCard.getEnrollment().getClassroom() != null
+                && reportCard.getEnrollment().getClassroom().getAcademicYear() != null
+                && reportCard.getEnrollment().getClassroom().getAcademicYear().getSchool() != null
+                ? reportCard.getEnrollment().getClassroom().getAcademicYear().getSchool().getNom()
+                : "ÉCOLE";
+        Paragraph school = new Paragraph(schoolName, subtitleFont);
+        school.setAlignment(Element.ALIGN_CENTER);
+        document.add(school);
+
+        String year = reportCard.getAcademicYear() != null
+                ? reportCard.getAcademicYear().getLibelle()
+                : "Année scolaire: -";
+        Paragraph yearParagraph = new Paragraph(year, subtitleFont);
+        yearParagraph.setAlignment(Element.ALIGN_CENTER);
+        document.add(yearParagraph);
+
+        document.add(new Paragraph(" "));
+    }
+
+    private void addAnnualStudentInfo(Document document, AcademicYearReportCard reportCard) throws Exception {
+        String studentName = reportCard.getEnrollment() != null && reportCard.getEnrollment().getStudent() != null
+                ? reportCard.getEnrollment().getStudent().getNom() + " " +
+                  (reportCard.getEnrollment().getStudent().getPostnom() != null ?
+                   reportCard.getEnrollment().getStudent().getPostnom() : "")
+                : "-";
+        String matricule = reportCard.getEnrollment() != null && reportCard.getEnrollment().getStudent() != null
+                ? reportCard.getEnrollment().getStudent().getMatricule() : "-";
+        String classroom = reportCard.getEnrollment() != null && reportCard.getEnrollment().getClassroom() != null
+                ? reportCard.getEnrollment().getClassroom().getNom() : "-";
+
+        addField(document, "Élève", studentName);
+        addField(document, "Matricule", matricule);
+        addField(document, "Classe", classroom);
+        addField(document, "Date", java.time.LocalDate.now().toString());
+        document.add(new Paragraph(" "));
+    }
+
+    private void addAnnualGradesTable(Document document, List<AcademicYearReportCardDetailResponse> details) throws Exception {
+        PdfPTable table = new PdfPTable(10);
+        table.setWidthPercentage(100f);
+
+        table.addCell("Matière");
+        table.addCell("Coeff");
+        table.addCell("1er Trim.");
+        table.addCell("2ème Trim.");
+        table.addCell("3ème Trim.");
+        table.addCell("Examen");
+        table.addCell("Moyenne");
+        table.addCell("Rang");
+        table.addCell("Points");
+        table.addCell("%");
+
+        for (AcademicYearReportCardDetailResponse detail : details) {
+            table.addCell(detail.getSubjectNom() != null ? detail.getSubjectNom() : "-");
+            table.addCell(detail.getCoefficient() != null ? String.valueOf(detail.getCoefficient()) : "-");
+            table.addCell(detail.getMoyenneT1() != null ? detail.getMoyenneT1().toString() : "-");
+            table.addCell(detail.getMoyenneT2() != null ? detail.getMoyenneT2().toString() : "-");
+            table.addCell(detail.getMoyenneT3() != null ? detail.getMoyenneT3().toString() : "-");
+            table.addCell(detail.getMoyenneExamen() != null ? detail.getMoyenneExamen().toString() : "-");
+            table.addCell(detail.getMoyenne() != null ? detail.getMoyenne().toString() : "-");
+            table.addCell(detail.getRangMatiere() != null ? String.valueOf(detail.getRangMatiere()) : "-");
+            table.addCell(detail.getPoints() != null ? detail.getPoints().toString() : "-");
+            table.addCell(detail.getPourcentage() != null ? detail.getPourcentage().toString() : "-");
+        }
+
+        document.add(table);
+        document.add(new Paragraph(" "));
+    }
+
+    private void addAnnualSummary(Document document, AcademicYearReportCard reportCard) throws Exception {
+        document.add(new Paragraph(" "));
+
+        String total = String.format("Total: %s / %s = %s%%",
+            reportCard.getTotalPoints() != null ? reportCard.getTotalPoints() : "0",
+            reportCard.getMaximumPoints() != null ? reportCard.getMaximumPoints() : "0",
+            reportCard.getPourcentage() != null ? reportCard.getPourcentage() : "0");
+
+        document.add(new Paragraph(total));
+
+        String rang = reportCard.getRang() != null ?
+            String.format("Rang: %d", reportCard.getRang()) : "Rang: -";
+        document.add(new Paragraph(rang));
+
+        if (reportCard.getMention() != null) {
+            document.add(new Paragraph("Mention: " + reportCard.getMention()));
+        }
+
+        if (reportCard.getDecision() != null) {
+            document.add(new Paragraph("Décision: " + reportCard.getDecision()));
+        }
+
+        String attendance = String.format("Absences: %d | Retards: %d",
+            reportCard.getTotalAbsences() != null ? reportCard.getTotalAbsences() : 0,
+            reportCard.getTotalRetards() != null ? reportCard.getTotalRetards() : 0);
+        document.add(new Paragraph(attendance));
+
+        String discipline = String.format("Conduite: %s | Application: %s",
+            reportCard.getConduite() != null ? reportCard.getConduite() : "-",
+            reportCard.getApplication() != null ? reportCard.getApplication() : "-");
+        document.add(new Paragraph(discipline));
+
+        document.add(new Paragraph(" "));
     }
 }

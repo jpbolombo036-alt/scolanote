@@ -314,10 +314,7 @@ public class AuthController {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
-        List<String> roles = userRoleRepository.findAll().stream()
-                .filter(ur -> ur.getUser() != null && ur.getUser().getId().equals(user.getId()) && ur.getRole() != null)
-                .map(ur -> ur.getRole().getNom())
-                .toList();
+        List<String> roles = userRoleRepository.findRoleNamesByUserId(user.getId());
         List<String> permissions = loadPermissionsSafely(user.getId());
 
         CurrentUserResponse currentUserResponse = new CurrentUserResponse();
@@ -365,10 +362,7 @@ public class AuthController {
         user.setTelephone(request.getTelephone());
         User saved = userRepository.save(user);
 
-        List<String> roles = userRoleRepository.findAll().stream()
-                .filter(ur -> ur.getUser() != null && ur.getUser().getId().equals(saved.getId()) && ur.getRole() != null)
-                .map(ur -> ur.getRole().getNom())
-                .toList();
+        List<String> roles = userRoleRepository.findRoleNamesByUserId(saved.getId());
         List<String> permissions = loadPermissionsSafely(saved.getId());
 
         CurrentUserResponse currentUserResponse = new CurrentUserResponse();

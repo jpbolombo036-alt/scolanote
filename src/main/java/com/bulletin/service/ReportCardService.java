@@ -336,7 +336,7 @@ public class ReportCardService {
                 .orElseThrow(() -> new ResourceNotFoundException("Classe non trouvée avec l'ID: " + classroomId));
 
         // Vérifier les permissions pour générer les bulletins annuels
-        securityUtils.assertPermission("BULLETIN_ANNUEL_GENERER"); // Nouvelle permission
+        assertCanGenerateAcademicYearBulletins(classroom);
         securityUtils.assertSchoolAccess(academicYear.getSchool() != null ? academicYear.getSchool().getId() : null);
         securityUtils.assertSchoolAccess(classroom.getAcademicYear() != null && classroom.getAcademicYear().getSchool() != null ? classroom.getAcademicYear().getSchool().getId() : null);
 
@@ -642,6 +642,26 @@ public class ReportCardService {
             return bulletinPdfService.loadPdf(id);
         } catch (Exception e) {
             throw new RuntimeException("Échec du chargement du PDF annuel", e);
+        }
+    }
+
+    private void assertCanGenerateAcademicYearBulletins(Classroom classroom) {
+        if (securityUtils.hasPermission("BULLETIN_ANNUEL_GENERER") || securityUtils.isDirection()) {
+            return;
+        }
+        Long currentUserId = securityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new SecurityException("Authentification requise");
+        }
+
+        Long titulaireTeacherId = classroom.getTitulaireId();
+        if (titulaireTeacherId == null) {
+            throw new SecurityException("Accès refusé : aucun titulaire n'est défini pour cette classe");
+        }
+
+        boolean owns = userTeacherRepository.existsByUser_IdAndTeacher_Id(currentUserId, titulaireTeacherId);
+        if (!owns) {
+            throw new SecurityException("Accès refusé : seuls la direction ou le titulaire de la classe peuvent générer les bulletins annuels");
         }
     }
 

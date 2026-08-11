@@ -20,6 +20,7 @@ import com.bulletin.repository.UserStudentRepository;
 import com.bulletin.repository.UserTeacherRepository;
 import com.bulletin.security.SecurityUtils;
 import com.bulletin.service.bulletin.BulletinCalculatorService;
+import com.bulletin.service.bulletin.BulletinPdfService;
 import com.bulletin.service.bulletin.SubjectResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,6 +64,8 @@ public class ReportCardService {
     private final TeachingAssignmentRepository teachingAssignmentRepository;
     private final AssessmentRepository assessmentRepository;
     private final GradeRepository gradeRepository;
+    private final TrimesterRepository trimesterRepository;
+    private final BulletinPdfService bulletinPdfService;
     private final PeriodClosureService periodClosureService;
 
     @Value("${app.bulletin.mention.excellent:85}")
@@ -400,8 +403,36 @@ public class ReportCardService {
             academicYearReportCard = academicYearReportCardRepository.save(academicYearReportCard);
 
             for (SubjectResult sr : annualSubjectResults) { // Correction: Utiliser annualSubjectResults
-                // Calcul du rang annuel par matière
                 Integer rangMatiereAnnuel = calculator.computeAcademicYearSubjectRank(enrollment, sr.getSubject(), academicYear);
+
+                List<Trimester> trimesters = trimesterRepository.findByAcademicYearId(academicYear.getId());
+                trimesters.sort(Comparator.comparing(t -> t.getOrdre() != null ? t.getOrdre() : Integer.MAX_VALUE));
+                BigDecimal t1 = BigDecimal.ZERO;
+                BigDecimal t2 = BigDecimal.ZERO;
+                BigDecimal t3 = BigDecimal.ZERO;
+                BigDecimal exam = BigDecimal.ZERO;
+
+                for (Trimester trimester : trimesters) {
+                    List<SubjectResult> trimesterResults = calculator.computeSubjectResultsForTrimester(enrollment, trimester);
+                    BigDecimal moyenne = trimesterResults.stream()
+                            .filter(tr -> tr.getSubject().getId().equals(sr.getSubject().getId()))
+                            .findFirst()
+                            .map(SubjectResult::getMoyenne)
+                            .orElse(BigDecimal.ZERO);
+                    switch (trimester.getOrdre() != null ? trimester.getOrdre() : 0) {
+                        case 1 -> t1 = moyenne;
+                        case 2 -> t2 = moyenne;
+                        case 3 -> t3 = moyenne;
+                        default -> {}
+                    }
+                }
+
+                List<SubjectResult> examResults = calculator.computeSubjectResultsForExams(enrollment, academicYear);
+                exam = examResults.stream()
+                        .filter(er -> er.getSubject().getId().equals(sr.getSubject().getId()))
+                        .findFirst()
+                        .map(SubjectResult::getMoyenne)
+                        .orElse(BigDecimal.ZERO);
 
                 AcademicYearReportCardDetail detail = AcademicYearReportCardDetail.builder()
                         .academicYearReportCard(academicYearReportCard)
@@ -412,7 +443,11 @@ public class ReportCardService {
                         .maximum(sr.getMaximum())
                         .pourcentage(sr.getPourcentage())
                         .rangMatiere(rangMatiereAnnuel)
-                        .observation(sr.getObservation()) // Si des observations agrégées sont possibles
+                        .observation(sr.getObservation())
+                        .moyenneT1(t1)
+                        .moyenneT2(t2)
+                        .moyenneT3(t3)
+                        .moyenneExamen(exam)
                         .build();
                 academicYearReportCardDetailRepository.save(detail);
             }
@@ -570,6 +605,44 @@ public class ReportCardService {
         return reportCards.stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AcademicYearReportCardResponse> getAccessibleAcademicYearReportCards(Pageable pageable) {
+        if (securityUtils.isSuperAdmin()) {
+            return academicYearReportCardRepository.findAll(pageable)
+                    .map(this::toAcademicYearReportCardResponse);
+        }
+        return academicYearReportCardRepository.findBySchoolId(securityUtils.getCurrentSchoolId(), pageable)
+                .map(this::toAcademicYearReportCardResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public AcademicYearReportCardResponse getAcademicYearReportCard(Long id) {
+        AcademicYearReportCard reportCard = academicYearReportCardRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Bulletin annuel non trouvé avec l'ID: " + id));
+        Long schoolId = reportCard.getSchoolId();
+        securityUtils.assertSchoolAccess(schoolId);
+        return toAcademicYearReportCardResponse(reportCard);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AcademicYearReportCardResponse> getAcademicYearReportCardsByEnrollment(Long enrollmentId) {
+        return academicYearReportCardRepository.findByEnrollmentId(enrollmentId).stream()
+                .map(this::toAcademicYearReportCardResponse)
+                .toList();
+    }
+
+    public byte[] generateAcademicYearPdf(Long id) {
+        AcademicYearReportCard reportCard = academicYearReportCardRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Bulletin annuel non trouvé avec l'ID: " + id));
+        securityUtils.assertSchoolAccess(reportCard.getSchoolId());
+        bulletinPdfService.generateAcademicYearPdf(id);
+        try {
+            return bulletinPdfService.loadPdf(id);
+        } catch (Exception e) {
+            throw new RuntimeException("Échec du chargement du PDF annuel", e);
+        }
     }
 
     private void assertCanGenerateBulletins(Classroom classroom) {

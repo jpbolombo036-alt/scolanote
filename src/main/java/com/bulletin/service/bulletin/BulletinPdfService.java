@@ -83,6 +83,11 @@ public class BulletinPdfService {
         }
     }
 
+    @Transactional
+    public String generateAcademicYearPdf(Long academicYearReportCardId) {
+        throw new UnsupportedOperationException("La génération PDF des bulletins annuels n'est pas encore implémentée");
+    }
+
     /** Indique si le PDF existe déjà dans le stockage (S3 ou local). */
     public boolean pdfExists(Long reportCardId) {
         return fileStorageService.exists(reportCardId);

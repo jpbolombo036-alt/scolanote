@@ -27,6 +27,7 @@ public class BulletinCalculatorService {
     private final AssessmentTypeRepository assessmentTypeRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final TrimesterRepository trimesterRepository;
+    private final PeriodRepository periodRepository;
 
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
 
@@ -347,6 +348,142 @@ public class BulletinCalculatorService {
         }
 
         return annualResults;
+    }
+
+    /**
+     * Calcule les résultats par matière pour un élève (inscription) et un trimestre donné,
+     * en agrégeant uniquement les évaluations des périodes de type PERIODE dans ce trimestre.
+     */
+    public List<SubjectResult> computeSubjectResultsForTrimester(Enrollment enrollment, Trimester trimester) {
+        Classroom classroom = enrollment.getClassroom();
+        Student student = enrollment.getStudent();
+
+        List<Period> periodePeriods = periodRepository.findByTrimesterId(trimester.getId()).stream()
+                .filter(p -> p.getType() == Period.PeriodType.PERIODE)
+                .toList();
+
+        List<TeachingAssignment> assignments = teachingAssignmentRepository.findByClassroomId(classroom.getId());
+        List<SubjectResult> results = new ArrayList<>();
+
+        for (TeachingAssignment assignment : assignments) {
+            Subject subject = assignment.getSubject();
+            Integer subjectCoefficient = resolveSubjectCoefficient(classroom, subject);
+
+            BigDecimal weightedSum = BigDecimal.ZERO;
+            BigDecimal coeffSum = BigDecimal.ZERO;
+            BigDecimal maximum = BigDecimal.ZERO;
+
+            for (Period period : periodePeriods) {
+                List<Assessment> assessments = assessmentRepository
+                        .findByAssignmentId(assignment.getId()).stream()
+                        .filter(a -> a.getPeriod() != null && a.getPeriod().getId().equals(period.getId()))
+                        .toList();
+
+                for (Assessment assessment : assessments) {
+                    BigDecimal evalCoeff = resolveAssessmentCoefficient(assessment);
+                    BigDecimal noteMax = assessment.getNoteMax() != null ? assessment.getNoteMax() : BigDecimal.ZERO;
+
+                    List<Grade> grades = gradeRepository.findByAssessmentId(assessment.getId()).stream()
+                            .filter(g -> g.getStudent() != null && g.getStudent().getId().equals(student.getId()))
+                            .filter(g -> g.getNote() != null)
+                            .toList();
+
+                    BigDecimal studentNote = grades.isEmpty() ? BigDecimal.ZERO : grades.get(0).getNote();
+
+                    weightedSum = weightedSum.add(studentNote.multiply(evalCoeff));
+                    coeffSum = coeffSum.add(evalCoeff);
+                    maximum = maximum.add(noteMax.multiply(BigDecimal.valueOf(subjectCoefficient)));
+                }
+            }
+
+            BigDecimal moyenne = coeffSum.compareTo(BigDecimal.ZERO) > 0
+                    ? weightedSum.divide(coeffSum, 2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+
+            BigDecimal points = moyenne.multiply(BigDecimal.valueOf(subjectCoefficient));
+            BigDecimal pourcentage = maximum.compareTo(BigDecimal.ZERO) > 0
+                    ? points.divide(maximum, 2, RoundingMode.HALF_UP).multiply(ONE_HUNDRED)
+                    : BigDecimal.ZERO;
+
+            results.add(SubjectResult.builder()
+                    .subject(subject)
+                    .coefficient(subjectCoefficient)
+                    .moyenne(moyenne)
+                    .points(points)
+                    .maximum(maximum)
+                    .pourcentage(pourcentage)
+                    .build());
+        }
+
+        return results;
+    }
+
+    /**
+     * Calcule les résultats par matière pour un élève (inscription) sur les épreuves (EXAMEN)
+     * d'une année scolaire complète.
+     */
+    public List<SubjectResult> computeSubjectResultsForExams(Enrollment enrollment, AcademicYear academicYear) {
+        Classroom classroom = enrollment.getClassroom();
+        Student student = enrollment.getStudent();
+
+        List<Period> examPeriods = periodRepository.findByTrimester_AcademicYearId(academicYear.getId()).stream()
+                .filter(p -> p.getType() == Period.PeriodType.EXAMEN)
+                .toList();
+
+        List<TeachingAssignment> assignments = teachingAssignmentRepository.findByClassroomId(classroom.getId());
+        List<SubjectResult> results = new ArrayList<>();
+
+        for (TeachingAssignment assignment : assignments) {
+            Subject subject = assignment.getSubject();
+            Integer subjectCoefficient = resolveSubjectCoefficient(classroom, subject);
+
+            BigDecimal weightedSum = BigDecimal.ZERO;
+            BigDecimal coeffSum = BigDecimal.ZERO;
+            BigDecimal maximum = BigDecimal.ZERO;
+
+            for (Period period : examPeriods) {
+                List<Assessment> assessments = assessmentRepository
+                        .findByAssignmentId(assignment.getId()).stream()
+                        .filter(a -> a.getPeriod() != null && a.getPeriod().getId().equals(period.getId()))
+                        .toList();
+
+                for (Assessment assessment : assessments) {
+                    BigDecimal evalCoeff = resolveAssessmentCoefficient(assessment);
+                    BigDecimal noteMax = assessment.getNoteMax() != null ? assessment.getNoteMax() : BigDecimal.ZERO;
+
+                    List<Grade> grades = gradeRepository.findByAssessmentId(assessment.getId()).stream()
+                            .filter(g -> g.getStudent() != null && g.getStudent().getId().equals(student.getId()))
+                            .filter(g -> g.getNote() != null)
+                            .toList();
+
+                    BigDecimal studentNote = grades.isEmpty() ? BigDecimal.ZERO : grades.get(0).getNote();
+
+                    weightedSum = weightedSum.add(studentNote.multiply(evalCoeff));
+                    coeffSum = coeffSum.add(evalCoeff);
+                    maximum = maximum.add(noteMax.multiply(BigDecimal.valueOf(subjectCoefficient)));
+                }
+            }
+
+            BigDecimal moyenne = coeffSum.compareTo(BigDecimal.ZERO) > 0
+                    ? weightedSum.divide(coeffSum, 2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+
+            BigDecimal points = moyenne.multiply(BigDecimal.valueOf(subjectCoefficient));
+            BigDecimal pourcentage = maximum.compareTo(BigDecimal.ZERO) > 0
+                    ? points.divide(maximum, 2, RoundingMode.HALF_UP).multiply(ONE_HUNDRED)
+                    : BigDecimal.ZERO;
+
+            results.add(SubjectResult.builder()
+                    .subject(subject)
+                    .coefficient(subjectCoefficient)
+                    .moyenne(moyenne)
+                    .points(points)
+                    .maximum(maximum)
+                    .pourcentage(pourcentage)
+                    .build());
+        }
+
+        return results;
     }
 
     /**

@@ -70,6 +70,13 @@ public class AcademicYearReportCard extends BaseEntity {
     @Builder.Default
     private String statut = Statut.BROUILLON.name();
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id", insertable = false, updatable = false)
+    private School school;
+
+    @Column(name = "school_id")
+    private Long schoolId;
+
     // Champs d'audit (qui a validé/signé) - à ajouter si nécessaire, comme pour ReportCard
     // private User valideParPrefetBy;
     // private LocalDateTime valideParPrefetAt;

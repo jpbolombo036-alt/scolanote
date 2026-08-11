@@ -41,4 +41,16 @@ public class AcademicYearReportCardDetail extends BaseEntity {
 
     @Column(length = 255)
     private String observation; // Observation agrégée ou finale
+
+    @Column(name = "moyenne_t1", precision = 5, scale = 2)
+    private BigDecimal moyenneT1;
+
+    @Column(name = "moyenne_t2", precision = 5, scale = 2)
+    private BigDecimal moyenneT2;
+
+    @Column(name = "moyenne_t3", precision = 5, scale = 2)
+    private BigDecimal moyenneT3;
+
+    @Column(name = "moyenne_examen", precision = 5, scale = 2)
+    private BigDecimal moyenneExamen;
 }

@@ -28,5 +28,9 @@ public interface AcademicYearReportCardMapper {
     @Mapping(target = "subjectNom", source = "subject.nom")
     @Mapping(target = "subjectCode", source = "subject.code")
     @Mapping(target = "appreciation", source = "observation")
+    @Mapping(target = "moyenneT1", source = "moyenneT1")
+    @Mapping(target = "moyenneT2", source = "moyenneT2")
+    @Mapping(target = "moyenneT3", source = "moyenneT3")
+    @Mapping(target = "moyenneExamen", source = "moyenneExamen")
     AcademicYearReportCardDetailResponse toDetailResponse(AcademicYearReportCardDetail detail);
 }

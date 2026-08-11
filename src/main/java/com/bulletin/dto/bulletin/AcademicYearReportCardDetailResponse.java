@@ -27,4 +27,9 @@ public class AcademicYearReportCardDetailResponse {
 
     @JsonProperty("observation")
     private String appreciation;
+
+    private BigDecimal moyenneT1;
+    private BigDecimal moyenneT2;
+    private BigDecimal moyenneT3;
+    private BigDecimal moyenneExamen;
 }

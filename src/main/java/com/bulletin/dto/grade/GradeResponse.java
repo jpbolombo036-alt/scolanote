@@ -22,6 +22,10 @@ public class GradeResponse {
     private BigDecimal note;
     private boolean absence;
     private String observation;
+
+    private String matiere;
+
+    private Integer coefficient;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

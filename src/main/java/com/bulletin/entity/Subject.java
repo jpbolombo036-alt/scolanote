@@ -19,6 +19,8 @@ public class Subject extends BaseEntity {
     @Column(length = 500)
     private String description;
 
+    private Integer coefficient;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "school_id", insertable = false, updatable = false)
     private School school;

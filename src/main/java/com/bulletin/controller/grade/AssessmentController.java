@@ -51,6 +51,12 @@ public class AssessmentController {
         return ResponseEntity.ok(assessmentService.getByTerm(trimestreId));
     }
 
+    @GetMapping("/classe/{classeId}/trimestre/{trimestreId}")
+    @Operation(summary = "Évaluations par classe et trimestre", description = "Retourne les évaluations d'une classe pour un trimestre")
+    public ResponseEntity<List<AssessmentResponse>> getByClassroomAndTerm(@PathVariable Long classeId, @PathVariable Long trimestreId) {
+        return ResponseEntity.ok(assessmentService.getByClassroomAndPeriod(classeId, trimestreId));
+    }
+
     @PutMapping("/{id}")
     @Operation(summary = "Modifier une évaluation", description = "Modifie une évaluation")
     public ResponseEntity<AssessmentResponse> updateAssessment(@PathVariable Long id, @Valid @RequestBody AssessmentRequest request) {

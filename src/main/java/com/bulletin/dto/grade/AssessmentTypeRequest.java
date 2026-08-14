@@ -21,4 +21,6 @@ public class AssessmentTypeRequest {
     private Integer coefficient;
 
     private Integer ordre;
+
+    private Integer pourcentage;
 }

@@ -87,6 +87,17 @@ public class AssessmentService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<AssessmentResponse> getByClassroomAndPeriod(Long classroomId, Long periodId) {
+        findPeriod(periodId);
+        List<Assessment> assessments = securityUtils.isSuperAdmin()
+                ? assessmentRepository.findByClassroomIdAndPeriodIdWithDetails(classroomId, periodId)
+                : assessmentRepository.findByClassroomIdAndPeriodIdWithDetails(classroomId, periodId);
+        return assessments.stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     @Transactional
     public AssessmentResponse updateAssessment(Long id, AssessmentRequest request) {
         periodClosureService.assertPeriodeOuverte(request.getPeriodId());

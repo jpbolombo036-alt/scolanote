@@ -17,6 +17,7 @@ public class SubjectResponse {
     private String code;
     private String nom;
     private String description;
+    private Integer coefficient;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

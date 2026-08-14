@@ -21,6 +21,8 @@ public class AssessmentResponse {
     private String assessmentTypeNom;
     private Long periodId;
     private String periodNom;
+    private String matiere;
+    private String classroomNom;
     private String titre;
     private LocalDate date;
     private BigDecimal noteMax;

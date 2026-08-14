@@ -17,6 +17,7 @@ public class AssessmentTypeResponse {
     private String nom;
     private Integer coefficient;
     private Integer ordre;
+    private Integer pourcentage;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

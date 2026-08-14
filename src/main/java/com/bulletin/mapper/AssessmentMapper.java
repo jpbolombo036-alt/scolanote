@@ -15,6 +15,8 @@ public interface AssessmentMapper {
     @Mapping(target = "assessmentTypeNom", source = "assessmentType.nom")
     @Mapping(target = "periodId", source = "period.id")
     @Mapping(target = "periodNom", source = "period.nom")
+    @Mapping(target = "matiere", expression = "java(assessment.getAssignment() != null && assessment.getAssignment().getSubject() != null ? assessment.getAssignment().getSubject().getNom() : null)")
+    @Mapping(target = "classroomNom", expression = "java(assessment.getAssignment() != null && assessment.getAssignment().getClassroom() != null ? assessment.getAssignment().getClassroom().getNom() : null)")
     AssessmentResponse toResponse(Assessment assessment);
 
     @Mapping(target = "assignment", ignore = true)

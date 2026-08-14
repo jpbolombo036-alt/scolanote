@@ -17,6 +17,8 @@ public class AssessmentType extends BaseEntity {
 
     private Integer ordre;
 
+    private Integer pourcentage;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "school_id", insertable = false, updatable = false)
     private School school;

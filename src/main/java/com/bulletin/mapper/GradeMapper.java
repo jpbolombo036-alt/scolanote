@@ -14,6 +14,8 @@ public interface GradeMapper {
     @Mapping(target = "studentId", source = "student.id")
     @Mapping(target = "studentNom", source = "student.nom")
     @Mapping(target = "studentMatricule", source = "student.matricule")
+    @Mapping(target = "matiere", expression = "java(grade.getAssessment() != null && grade.getAssessment().getAssignment() != null && grade.getAssessment().getAssignment().getSubject() != null ? grade.getAssessment().getAssignment().getSubject().getNom() : null)")
+    @Mapping(target = "coefficient", expression = "java(grade.getAssessment() != null && grade.getAssessment().getAssignment() != null && grade.getAssessment().getAssignment().getSubject() != null ? grade.getAssessment().getAssignment().getSubject().getCoefficient() : null)")
     GradeResponse toResponse(Grade grade);
 
     @Mapping(target = "assessment", ignore = true)

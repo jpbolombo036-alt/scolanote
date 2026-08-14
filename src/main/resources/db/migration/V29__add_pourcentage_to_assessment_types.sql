@@ -1,0 +1,1 @@
+ALTER TABLE assessment_types ADD COLUMN IF NOT EXISTS pourcentage INTEGER DEFAULT 100;

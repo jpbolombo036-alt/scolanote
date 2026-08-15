@@ -2,6 +2,7 @@ package com.bulletin.controller.grade;
 
 import com.bulletin.dto.grade.GradeRequest;
 import com.bulletin.dto.grade.GradeResponse;
+import com.bulletin.dto.grade.MissingGradeStudentResponse;
 import com.bulletin.service.GradeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -57,6 +58,12 @@ public class GradeController {
     @Operation(summary = "Notes par élève", description = "Retourne les notes d'un élève")
     public ResponseEntity<List<GradeResponse>> getByStudent(@PathVariable Long eleveId) {
         return ResponseEntity.ok(gradeService.getByStudent(eleveId));
+    }
+
+    @GetMapping("/evaluation/{evaluationId}/manquants")
+    @Operation(summary = "Élèves non notés", description = "Retourne les élèves de la classe qui n'ont pas encore de note pour cette évaluation (triés par numéro d'ordre)")
+    public ResponseEntity<List<MissingGradeStudentResponse>> getStudentsWithoutGrade(@PathVariable Long evaluationId) {
+        return ResponseEntity.ok(gradeService.getStudentsWithoutGrade(evaluationId));
     }
 
     @PutMapping("/{id}")

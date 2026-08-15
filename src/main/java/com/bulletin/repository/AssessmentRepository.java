@@ -67,4 +67,29 @@ public interface AssessmentRepository extends JpaRepository<Assessment, Long> {
     List<Assessment> findByClassroomIdAndPeriodIdWithDetails(
             @Param("classroomId") Long classroomId,
             @Param("periodId") Long periodId);
+
+    /**
+     * Variante filtrée par école (multi-tenant) : un utilisateur non super-admin
+     * ne doit voir que les évaluations de SA propre école, même s'il connaît
+     * l'ID d'une classe d'une autre école.
+     */
+    @Query("""
+            SELECT a FROM Assessment a
+            LEFT JOIN FETCH a.assessmentType
+            LEFT JOIN FETCH a.assignment asn
+            LEFT JOIN FETCH asn.subject
+            WHERE asn.classroom.id = :classroomId
+              AND a.period.id = :periodId
+              AND a.schoolId = :schoolId
+            """)
+    List<Assessment> findByClassroomIdAndPeriodIdAndSchoolIdWithDetails(
+            @Param("classroomId") Long classroomId,
+            @Param("periodId") Long periodId,
+            @Param("schoolId") Long schoolId);
+
+    /**
+     * Nombre d'évaluations ACTIVES utilisant un type d'évaluation.
+     * Utilisé pour interdire la suppression d'un type encore référencé.
+     */
+    long countByAssessmentTypeId(Long assessmentTypeId);
 }

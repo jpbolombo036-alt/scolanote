@@ -26,6 +26,7 @@ public class TrimesterService {
     private final AcademicYearRepository academicYearRepository;
     private final TrimesterMapper trimesterMapper;
     private final SecurityUtils securityUtils;
+    private final AutoOrdreService autoOrdreService;
 
     private boolean isSuperAdmin() {
         return securityUtils.isSuperAdmin();
@@ -41,12 +42,21 @@ public class TrimesterService {
 
     @Transactional
     public TrimesterResponse createTrimester(TrimesterRequest request) {
-        Trimester trimester = trimesterMapper.toEntity(request);
-        trimester.setAcademicYear(findAcademicYear(request.getAcademicYearId()));
-        trimester.setSchoolId(requireSchoolId());
-        Trimester saved = trimesterRepository.save(trimester);
-        log.info("Trimestre créé: {}", saved.getId());
-        return trimesterMapper.toResponse(saved);
+        Long schoolId = requireSchoolId();
+        AcademicYear academicYear = findAcademicYear(request.getAcademicYearId());
+        // L'ordre est calculé côté serveur (max + 1) : la valeur fournie par le client est ignorée.
+        TrimesterResponse response = AutoOrdreRetry.retry(autoOrdreService,
+                () -> trimesterRepository.maxOrdreByAcademicYearIdAndSchoolId(request.getAcademicYearId(), schoolId),
+                ordre -> {
+                    Trimester trimester = trimesterMapper.toEntity(request);
+                    trimester.setAcademicYear(academicYear);
+                    trimester.setSchoolId(schoolId);
+                    trimester.setOrdre(ordre);
+                    Trimester saved = trimesterRepository.save(trimester);
+                    log.info("Trimestre créé: {}", saved.getId());
+                    return trimesterMapper.toResponse(saved);
+                });
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -114,7 +124,9 @@ public class TrimesterService {
     @Transactional
     public TrimesterResponse updateTrimester(Long id, TrimesterRequest request) {
         Trimester trimester = findById(id);
+        Integer existingOrdre = trimester.getOrdre();
         trimesterMapper.updateEntity(request, trimester);
+        trimester.setOrdre(existingOrdre); // l'ordre est immuable après création
         trimester.setAcademicYear(findAcademicYear(request.getAcademicYearId()));
         Trimester saved = trimesterRepository.save(trimester);
         log.info("Trimestre mis à jour: {}", saved.getId());

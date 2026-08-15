@@ -25,7 +25,7 @@ public class PeriodController {
     private final SecurityUtils securityUtils;
 
     @PostMapping
-    @Operation(summary = "Créer une période", description = "Crée une période (direction uniquement)")
+    @Operation(summary = "Créer une période", description = "Crée une période (direction uniquement). L'ordre est généré automatiquement serveur (max+1, scope trimestre+école) ; la valeur fournie est ignorée.")
     public ResponseEntity<PeriodResponse> createPeriod(@Valid @RequestBody PeriodRequest request) {
         securityUtils.assertPermission("PERIODE_GERER");
         return ResponseEntity.status(HttpStatus.CREATED).body(periodService.createPeriod(request));
@@ -71,7 +71,7 @@ public class PeriodController {
     // L'endpoint en double ici causait un "Ambiguous mapping" qui empêchait le démarrage.
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier une période")
+    @Operation(summary = "Modifier une période", description = "Modifie une période. L'ordre est immuable (ignoré du request).")
     public ResponseEntity<PeriodResponse> updatePeriod(@PathVariable Long id, @Valid @RequestBody PeriodRequest request) {
         return ResponseEntity.ok(periodService.updatePeriod(id, request));
     }

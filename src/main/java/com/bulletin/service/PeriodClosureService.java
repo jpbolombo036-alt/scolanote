@@ -120,13 +120,10 @@ public class PeriodClosureService {
                     .build();
         }
 
-        List<Long> evaluationIds = evaluations.stream()
-                .map(com.bulletin.entity.Assessment::getId)
-                .toList();
-
-        long totalNotes = gradeRepository.findAll().stream()
-                .filter(grade -> evaluationIds.contains(grade.getAssessment().getId()))
-                .count();
+        // Notes distinctes (couple évaluation-élève) de la période : requête
+        // ciblée (plus de findAll() de toute la table en mémoire) et comptage
+        // insensible aux éventuels doublons historiques.
+        long totalNotes = gradeRepository.findDistinctAssessmentStudentPairsByPeriodId(periodeId).size();
 
         long totalAttendus = 0;
         for (Assessment evaluation : evaluations) {

@@ -21,6 +21,7 @@ public class LevelService {
     private final LevelRepository levelRepository;
     private final LevelMapper levelMapper;
     private final SecurityUtils securityUtils;
+    private final AutoOrdreService autoOrdreService;
 
     private boolean isSuperAdmin() {
         return securityUtils.isSuperAdmin();
@@ -36,11 +37,19 @@ public class LevelService {
 
     @Transactional
     public LevelResponse createLevel(LevelRequest request) {
-        Level level = levelMapper.toEntity(request);
-        level.setSchoolId(requireSchoolId());
-        Level saved = levelRepository.save(level);
-        log.info("Niveau créé: {}", saved.getId());
-        return levelMapper.toResponse(saved);
+        Long schoolId = requireSchoolId();
+        // L'ordre est calculé côté serveur (max + 1) : la valeur fournie par le client est ignorée.
+        LevelResponse response = AutoOrdreRetry.retry(autoOrdreService,
+                () -> levelRepository.maxOrdreBySchoolId(schoolId),
+                ordre -> {
+                    Level level = levelMapper.toEntity(request);
+                    level.setSchoolId(schoolId);
+                    level.setOrdre(ordre);
+                    Level saved = levelRepository.save(level);
+                    log.info("Niveau créé: {}", saved.getId());
+                    return levelMapper.toResponse(saved);
+                });
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -63,7 +72,9 @@ public class LevelService {
     @Transactional
     public LevelResponse updateLevel(Long id, LevelRequest request) {
         Level level = findById(id);
+        Integer existingOrdre = level.getOrdre();
         levelMapper.updateEntity(request, level);
+        level.setOrdre(existingOrdre); // l'ordre est immuable après création
         Level saved = levelRepository.save(level);
         log.info("Niveau mis à jour: {}", saved.getId());
         return levelMapper.toResponse(saved);

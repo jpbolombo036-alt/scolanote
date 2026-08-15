@@ -4,6 +4,8 @@ import com.bulletin.entity.Period;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface PeriodRepository extends JpaRepository<Period, Long> {
@@ -16,4 +18,9 @@ public interface PeriodRepository extends JpaRepository<Period, Long> {
     List<Period> findBySchoolId(Long schoolId);
     Page<Period> findBySchoolId(Long schoolId, Pageable pageable);
     long countBySchoolId(Long schoolId);
+
+    long countByTrimesterIdAndSchoolIdAndOrdre(Long trimesterId, Long schoolId, Integer ordre);
+
+    @Query("SELECT MAX(p.ordre) FROM Period p WHERE p.trimester.id = :trimesterId AND p.schoolId = :schoolId")
+    Integer maxOrdreByTrimesterIdAndSchoolId(@Param("trimesterId") Long trimesterId, @Param("schoolId") Long schoolId);
 }

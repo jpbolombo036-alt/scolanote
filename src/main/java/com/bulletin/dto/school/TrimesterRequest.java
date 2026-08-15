@@ -20,6 +20,12 @@ public class TrimesterRequest {
     @NotBlank
     private String nom;
 
+    /**
+     * Ordre d'affichage du trimestre.
+     * <b>Ignoré par le serveur</b> : calculé automatiquement (max(ordre)+1 dans le scope
+     * année scolaire + école). La valeur fournie par le client est ignorée en création
+     * et immuable en modification.
+     */
     private Integer ordre;
     private LocalDate dateDebut;
     private LocalDate dateFin;

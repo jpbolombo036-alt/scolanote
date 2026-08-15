@@ -28,6 +28,7 @@ public class PeriodService {
     private final AcademicYearRepository academicYearRepository;
     private final PeriodMapper periodMapper;
     private final SecurityUtils securityUtils;
+    private final AutoOrdreService autoOrdreService;
 
     private boolean isSuperAdmin() {
         return securityUtils.isSuperAdmin();
@@ -43,12 +44,21 @@ public class PeriodService {
 
     @Transactional
     public PeriodResponse createPeriod(PeriodRequest request) {
-        Period period = periodMapper.toEntity(request);
-        period.setSchoolId(requireSchoolId());
-        period.setTrimester(findTrimester(request.getTrimesterId()));
-        Period saved = periodRepository.save(period);
-        log.info("Période créée: {}", saved.getId());
-        return periodMapper.toResponse(saved);
+        Long schoolId = requireSchoolId();
+        Trimester trimester = findTrimester(request.getTrimesterId());
+        // L'ordre est calculé côté serveur (max + 1) : la valeur fournie par le client est ignorée.
+        PeriodResponse response = AutoOrdreRetry.retry(autoOrdreService,
+                () -> periodRepository.maxOrdreByTrimesterIdAndSchoolId(request.getTrimesterId(), schoolId),
+                ordre -> {
+                    Period period = periodMapper.toEntity(request);
+                    period.setTrimester(trimester);
+                    period.setSchoolId(schoolId);
+                    period.setOrdre(ordre);
+                    Period saved = periodRepository.save(period);
+                    log.info("Période créée: {}", saved.getId());
+                    return periodMapper.toResponse(saved);
+                });
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -142,7 +152,9 @@ public class PeriodService {
     @Transactional
     public PeriodResponse updatePeriod(Long id, PeriodRequest request) {
         Period period = findById(id);
+        Integer existingOrdre = period.getOrdre();
         periodMapper.updateEntity(request, period);
+        period.setOrdre(existingOrdre); // l'ordre est immuable après création
         period.setTrimester(findTrimester(request.getTrimesterId()));
         Period saved = periodRepository.save(period);
         log.info("Période mise à jour: {}", saved.getId());

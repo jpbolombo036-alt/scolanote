@@ -32,6 +32,16 @@ public class BulletinCalculatorService {
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
 
     /**
+     * Comparateur d'ancienneté des notes (updatedAt puis id, nulls d'abord).
+     * Sert à départager d'éventuels doublons historiques (antérieurs à la
+     * contrainte d'unicité V33) : la note la plus récente l'emporte,
+     * de façon déterministe, dans tous les modes de calcul.
+     */
+    private static final Comparator<Grade> NOTE_RECENCY_COMPARATOR = Comparator
+            .comparing(Grade::getUpdatedAt, Comparator.nullsFirst(Comparator.naturalOrder()))
+            .thenComparing(Grade::getId, Comparator.nullsFirst(Comparator.naturalOrder()));
+
+    /**
      * Calcule les résultats par matière pour un élève (inscription) et un trimestre.
      * La moyenne de chaque matière est pondérée par le coefficient de l'évaluation
      * (ou par défaut par le coefficient du type d'évaluation).
@@ -65,12 +75,8 @@ public class BulletinCalculatorService {
                 BigDecimal evalCoeff = resolveAssessmentCoefficient(assessment);
                 BigDecimal noteMax = assessment.getNoteMax() != null ? assessment.getNoteMax() : BigDecimal.ZERO;
 
-                List<Grade> grades = gradeRepository.findByAssessmentId(assessment.getId()).stream()
-                        .filter(g -> g.getStudent() != null && g.getStudent().getId().equals(student.getId()))
-                        .filter(g -> g.getNote() != null)
-                        .toList();
-
-                BigDecimal studentNote = grades.isEmpty() ? BigDecimal.ZERO : grades.get(0).getNote();
+                List<Grade> grades = gradeRepository.findByAssessmentId(assessment.getId());
+                BigDecimal studentNote = resolveStudentNote(grades, student.getId());
 
                 weightedSum = weightedSum.add(studentNote.multiply(evalCoeff));
                 coeffSum = coeffSum.add(evalCoeff);
@@ -166,15 +172,15 @@ public class BulletinCalculatorService {
                 .filter(a -> a.getAssignment() != null)
                 .collect(Collectors.groupingBy(a -> a.getAssignment().getId()));
         // "assessmentId:studentId" -> note (un élève = une note par évaluation)
+        // Tri par ancienneté : en cas de doublons historiques, la note la plus
+        // récente écrase les précédentes — même règle que resolveStudentNote().
         Map<String, BigDecimal> noteByAssessmentAndStudent = new HashMap<>();
-        for (Grade g : grades) {
-            if (g.getAssessment() == null || g.getStudent() == null || g.getNote() == null) {
-                continue;
-            }
-            noteByAssessmentAndStudent.put(
-                    g.getAssessment().getId() + ":" + g.getStudent().getId(),
-                    g.getNote());
-        }
+        grades.stream()
+                .filter(g -> g.getAssessment() != null && g.getStudent() != null && g.getNote() != null)
+                .sorted(NOTE_RECENCY_COMPARATOR)
+                .forEach(g -> noteByAssessmentAndStudent.put(
+                        g.getAssessment().getId() + ":" + g.getStudent().getId(),
+                        g.getNote()));
 
         // --- Calcul par élève ---
         Map<Long, List<SubjectResult>> resultsByEnrollment = new HashMap<>();
@@ -232,6 +238,20 @@ public class BulletinCalculatorService {
         private final BigDecimal totalPoints;
         private final BigDecimal maximumPoints;
         private final BigDecimal pourcentage;
+    }
+
+    /**
+     * Sélectionne LA note de référence d'un élève pour une évaluation.
+     * En cas de doublons historiques, la note la plus récemment mise à jour
+     * l'emporte (déterministe, aligné avec le calcul batch).
+     */
+    private BigDecimal resolveStudentNote(List<Grade> grades, Long studentId) {
+        return grades.stream()
+                .filter(g -> g.getStudent() != null && g.getStudent().getId().equals(studentId))
+                .filter(g -> g.getNote() != null)
+                .max(NOTE_RECENCY_COMPARATOR)
+                .map(Grade::getNote)
+                .orElse(BigDecimal.ZERO);
     }
 
     private Integer resolveSubjectCoefficient(Classroom classroom, Subject subject) {
@@ -315,12 +335,8 @@ public class BulletinCalculatorService {
                     BigDecimal evalCoeff = resolveAssessmentCoefficient(assessment);
                     BigDecimal noteMax = assessment.getNoteMax() != null ? assessment.getNoteMax() : BigDecimal.ZERO;
 
-                    List<Grade> grades = gradeRepository.findByAssessmentId(assessment.getId()).stream()
-                            .filter(g -> g.getStudent() != null && g.getStudent().getId().equals(student.getId()))
-                            .filter(g -> g.getNote() != null)
-                            .toList();
-
-                    BigDecimal studentNote = grades.isEmpty() ? BigDecimal.ZERO : grades.get(0).getNote();
+                    List<Grade> grades = gradeRepository.findByAssessmentId(assessment.getId());
+                    BigDecimal studentNote = resolveStudentNote(grades, student.getId());
 
                     annualWeightedSum = annualWeightedSum.add(studentNote.multiply(evalCoeff));
                     annualCoeffSum = annualCoeffSum.add(evalCoeff);
@@ -383,12 +399,8 @@ public class BulletinCalculatorService {
                     BigDecimal evalCoeff = resolveAssessmentCoefficient(assessment);
                     BigDecimal noteMax = assessment.getNoteMax() != null ? assessment.getNoteMax() : BigDecimal.ZERO;
 
-                    List<Grade> grades = gradeRepository.findByAssessmentId(assessment.getId()).stream()
-                            .filter(g -> g.getStudent() != null && g.getStudent().getId().equals(student.getId()))
-                            .filter(g -> g.getNote() != null)
-                            .toList();
-
-                    BigDecimal studentNote = grades.isEmpty() ? BigDecimal.ZERO : grades.get(0).getNote();
+                    List<Grade> grades = gradeRepository.findByAssessmentId(assessment.getId());
+                    BigDecimal studentNote = resolveStudentNote(grades, student.getId());
 
                     weightedSum = weightedSum.add(studentNote.multiply(evalCoeff));
                     coeffSum = coeffSum.add(evalCoeff);
@@ -451,12 +463,8 @@ public class BulletinCalculatorService {
                     BigDecimal evalCoeff = resolveAssessmentCoefficient(assessment);
                     BigDecimal noteMax = assessment.getNoteMax() != null ? assessment.getNoteMax() : BigDecimal.ZERO;
 
-                    List<Grade> grades = gradeRepository.findByAssessmentId(assessment.getId()).stream()
-                            .filter(g -> g.getStudent() != null && g.getStudent().getId().equals(student.getId()))
-                            .filter(g -> g.getNote() != null)
-                            .toList();
-
-                    BigDecimal studentNote = grades.isEmpty() ? BigDecimal.ZERO : grades.get(0).getNote();
+                    List<Grade> grades = gradeRepository.findByAssessmentId(assessment.getId());
+                    BigDecimal studentNote = resolveStudentNote(grades, student.getId());
 
                     weightedSum = weightedSum.add(studentNote.multiply(evalCoeff));
                     coeffSum = coeffSum.add(evalCoeff);

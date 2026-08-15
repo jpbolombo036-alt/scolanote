@@ -2,11 +2,18 @@ package com.bulletin.repository;
 
 import com.bulletin.entity.CurriculumSubject;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface CurriculumSubjectRepository extends JpaRepository<CurriculumSubject, Long> {
     List<CurriculumSubject> findByCurriculumId(Long curriculumId);
     List<CurriculumSubject> findBySubjectId(Long subjectId);
+
+    long countByCurriculumIdAndSchoolIdAndOrdre(Long curriculumId, Long schoolId, Integer ordre);
+
+    @Query("SELECT MAX(cs.ordre) FROM CurriculumSubject cs WHERE cs.curriculum.id = :curriculumId AND cs.schoolId = :schoolId")
+    Integer maxOrdreByCurriculumIdAndSchoolId(@Param("curriculumId") Long curriculumId, @Param("schoolId") Long schoolId);
 
     /**
      * Charge en une seule requête les coefficients de plusieurs matières.

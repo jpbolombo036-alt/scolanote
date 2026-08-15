@@ -90,9 +90,12 @@ public class AssessmentService {
     @Transactional(readOnly = true)
     public List<AssessmentResponse> getByClassroomAndPeriod(Long classroomId, Long periodId) {
         findPeriod(periodId);
+        // Multi-tenant : un utilisateur non super-admin ne voit que les
+        // évaluations de sa propre école (classe d'une autre école → liste vide).
         List<Assessment> assessments = securityUtils.isSuperAdmin()
                 ? assessmentRepository.findByClassroomIdAndPeriodIdWithDetails(classroomId, periodId)
-                : assessmentRepository.findByClassroomIdAndPeriodIdWithDetails(classroomId, periodId);
+                : assessmentRepository.findByClassroomIdAndPeriodIdAndSchoolIdWithDetails(
+                        classroomId, periodId, securityUtils.requireSchoolId());
         return assessments.stream()
                 .map(this::toResponse)
                 .toList();
@@ -139,13 +142,19 @@ public class AssessmentService {
     }
 
     private AssessmentType findAssessmentType(Long id) {
-        return assessmentTypeRepository.findById(id)
+        AssessmentType assessmentType = assessmentTypeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Type d'évaluation non trouvé avec l'ID: " + id));
+        // Multi-tenant : impossible de rattacher une évaluation au type d'une autre école
+        securityUtils.assertSchoolAccess(assessmentType.getSchoolId());
+        return assessmentType;
     }
 
     private Period findPeriod(Long id) {
-        return periodRepository.findById(id)
+        Period period = periodRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Période non trouvée avec l'ID: " + id));
+        // Multi-tenant : impossible de rattacher une évaluation à la période d'une autre école
+        securityUtils.assertSchoolAccess(period.getSchoolId());
+        return period;
     }
 
     private AssessmentResponse toResponse(Assessment assessment) {

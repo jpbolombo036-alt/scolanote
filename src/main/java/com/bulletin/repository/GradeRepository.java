@@ -17,6 +17,16 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
 
     List<Grade> findByAssessmentIdAndSchoolId(Long assessmentId, Long schoolId);
 
+    /**
+     * Recherche la/les note(s) ACTIVE(S) d'un élève pour une évaluation donnée.
+     * Utilisée pour garantir la règle « 1 élève = 1 note par évaluation ».
+     * Retourne une liste (et non Optional) par robustesse face aux éventuels
+     * doublons historiques ; les notes soft-deletées sont exclues par le filtre
+     * global {@code deleted_at IS NULL}, donc une re-saisie après suppression
+     * reste possible.
+     */
+    List<Grade> findByAssessmentIdAndStudentId(Long assessmentId, Long studentId);
+
     List<Grade> findByStudentIdAndSchoolId(Long studentId, Long schoolId);
 
     @Query("""
@@ -81,4 +91,16 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
     List<Grade> findByClassroomIdAndPeriodId(
             @Param("classroomId") Long classroomId,
             @Param("periodId") Long periodId);
+
+    /**
+     * Paires distinctes (assessment_id, student_id) des notes d'une période.
+     * Utilisé par la validation de clôture : comptage exact, insensible aux
+     * éventuels doublons, sans charger les entités complètes en mémoire.
+     */
+    @Query("""
+            SELECT DISTINCT g.assessment.id, g.student.id
+            FROM Grade g
+            WHERE g.assessment.period.id = :periodId
+            """)
+    List<Object[]> findDistinctAssessmentStudentPairsByPeriodId(@Param("periodId") Long periodId);
 }

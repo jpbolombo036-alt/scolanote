@@ -5,6 +5,7 @@ import com.bulletin.dto.grade.AssessmentTypeResponse;
 import com.bulletin.entity.AssessmentType;
 import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.AssessmentTypeMapper;
+import com.bulletin.repository.AssessmentRepository;
 import com.bulletin.repository.AssessmentTypeRepository;
 import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class AssessmentTypeService {
     private final AssessmentTypeRepository assessmentTypeRepository;
     private final AssessmentTypeMapper assessmentTypeMapper;
     private final SecurityUtils securityUtils;
+    private final AssessmentRepository assessmentRepository;
 
     private boolean isSuperAdmin() {
         return securityUtils.isSuperAdmin();
@@ -85,6 +87,14 @@ public class AssessmentTypeService {
     @Transactional
     public void deleteAssessmentType(Long id) {
         AssessmentType assessmentType = findById(id);
+        // Garde d'intégrité : interdire la suppression d'un type encore utilisé
+        // par des évaluations actives (sinon erreur FK ou évaluations orphelines).
+        long usages = assessmentRepository.countByAssessmentTypeId(id);
+        if (usages > 0) {
+            throw new IllegalStateException(
+                    "Impossible de supprimer ce type d'évaluation : " + usages
+                            + " évaluation(s) l'utilisent encore. Supprimez ou modifiez d'abord ces évaluations.");
+        }
         assessmentType.setDeletedAt(java.time.LocalDateTime.now());
         assessmentTypeRepository.save(assessmentType);
         log.info("Type d'évaluation supprimé (soft): {}", id);

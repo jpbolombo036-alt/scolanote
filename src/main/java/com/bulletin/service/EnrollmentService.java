@@ -30,6 +30,7 @@ public class EnrollmentService {
     private final ClassroomRepository classroomRepository;
     private final EnrollmentMapper enrollmentMapper;
     private final SecurityUtils securityUtils;
+    private final AutoOrdreService autoOrdreService;
 
     private boolean isSuperAdmin() {
         return securityUtils.isSuperAdmin();
@@ -45,12 +46,24 @@ public class EnrollmentService {
 
     @Transactional
     public EnrollmentResponse createEnrollment(EnrollmentRequest request) {
-        Enrollment enrollment = enrollmentMapper.toEntity(request);
-        enrollment.setStudent(findStudent(request.getStudentId()));
-        enrollment.setClassroom(findClassroom(request.getClassroomId()));
-        Enrollment saved = enrollmentRepository.save(enrollment);
-        log.info("Inscription créée: {}", saved.getId());
-        return enrollmentMapper.toResponse(saved);
+        Student student = findStudent(request.getStudentId());
+        Classroom classroom = findClassroom(request.getClassroomId());
+        Long schoolId = student.getSchoolId();
+        // Le numéro d'ordre est calculé côté serveur (max + 1) : la valeur fournie
+        // par le client est ignorée. schoolId provient de l'élève (disponible avant save).
+        EnrollmentResponse response = AutoOrdreRetry.retry(autoOrdreService,
+                () -> enrollmentRepository.maxNumeroOrdreByClassroomIdAndSchoolId(request.getClassroomId(), schoolId),
+                ordre -> {
+                    Enrollment enrollment = enrollmentMapper.toEntity(request);
+                    enrollment.setStudent(student);
+                    enrollment.setClassroom(classroom);
+                    enrollment.setNumeroOrdre(ordre);
+                    enrollment.setSchoolId(schoolId);
+                    Enrollment saved = enrollmentRepository.save(enrollment);
+                    log.info("Inscription créée: {}", saved.getId());
+                    return enrollmentMapper.toResponse(saved);
+                });
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -131,9 +144,14 @@ public class EnrollmentService {
     @Transactional
     public EnrollmentResponse updateEnrollment(Long id, EnrollmentRequest request) {
         Enrollment enrollment = findById(id);
+        Integer existingNumeroOrdre = enrollment.getNumeroOrdre();
         enrollmentMapper.updateEntity(request, enrollment);
-        enrollment.setStudent(findStudent(request.getStudentId()));
-        enrollment.setClassroom(findClassroom(request.getClassroomId()));
+        enrollment.setNumeroOrdre(existingNumeroOrdre); // le numéro d'ordre est immuable après création
+        Student student = findStudent(request.getStudentId());
+        Classroom classroom = findClassroom(request.getClassroomId());
+        enrollment.setStudent(student);
+        enrollment.setClassroom(classroom);
+        enrollment.setSchoolId(student.getSchoolId()); // rafraîchir si l'élève change
         Enrollment saved = enrollmentRepository.save(enrollment);
         log.info("Inscription mise à jour: {}", saved.getId());
         return enrollmentMapper.toResponse(saved);

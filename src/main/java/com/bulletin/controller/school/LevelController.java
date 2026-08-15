@@ -22,7 +22,7 @@ public class LevelController {
     private final LevelService levelService;
 
     @PostMapping
-    @Operation(summary = "Créer un niveau", description = "Crée un nouveau niveau")
+    @Operation(summary = "Créer un niveau", description = "Crée un nouveau niveau. L'ordre est généré automatiquement serveur (max+1, scope école) ; la valeur fournie est ignorée.")
     public ResponseEntity<LevelResponse> createLevel(@Valid @RequestBody LevelRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(levelService.createLevel(request));
     }
@@ -40,7 +40,7 @@ public class LevelController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier un niveau", description = "Modifie un niveau")
+    @Operation(summary = "Modifier un niveau", description = "Modifie un niveau. L'ordre est immuable (ignoré du request).")
     public ResponseEntity<LevelResponse> updateLevel(@PathVariable Long id, @Valid @RequestBody LevelRequest request) {
         return ResponseEntity.ok(levelService.updateLevel(id, request));
     }

@@ -16,5 +16,11 @@ public class LevelRequest {
     @NotBlank
     private String nom;
 
+    /**
+     * Ordre d'affichage du niveau.
+     * <b>Ignoré par le serveur</b> à la création et en modification : l'ordre est
+     * calculé automatiquement serveur (max(ordre)+1 dans l'école) et la valeur fournie
+     * par le client n'est jamais prise en compte.
+     */
     private Integer ordre;
 }

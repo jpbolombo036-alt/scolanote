@@ -26,7 +26,7 @@ public class EnrollmentController {
     private final SecurityUtils securityUtils;
 
     @PostMapping
-    @Operation(summary = "Créer une inscription", description = "Inscrit un élève dans une classe (direction uniquement)")
+    @Operation(summary = "Créer une inscription", description = "Inscrit un élève dans une classe (direction uniquement). Le numéro d'ordre est généré automatiquement serveur (max+1, scope classe+école) ; la valeur fournie est ignorée.")
     public ResponseEntity<EnrollmentResponse> createEnrollment(@Valid @RequestBody EnrollmentRequest request) {
         securityUtils.assertPermission("INSCRIPTION_GERER");
         return ResponseEntity.status(HttpStatus.CREATED).body(enrollmentService.createEnrollment(request));
@@ -63,7 +63,7 @@ public class EnrollmentController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier une inscription", description = "Modifie une inscription (direction uniquement)")
+    @Operation(summary = "Modifier une inscription", description = "Modifie une inscription (direction uniquement). Le numéro d'ordre est immuable (ignoré du request).")
     public ResponseEntity<EnrollmentResponse> updateEnrollment(@PathVariable Long id, @Valid @RequestBody EnrollmentRequest request) {
         securityUtils.assertPermission("INSCRIPTION_GERER");
         return ResponseEntity.ok(enrollmentService.updateEnrollment(id, request));

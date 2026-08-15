@@ -23,6 +23,12 @@ public class EnrollmentRequest {
 
     private LocalDate dateInscription;
 
+    /**
+     * Numéro d'ordre de l'élève dans la classe.
+     * <b>Ignoré par le serveur</b> : calculé automatiquement (max(numero_ordre)+1 dans le
+     * scope classe + école). La valeur fournie par le client est ignorée en création et
+     * immuable en modification.
+     */
     private Integer numeroOrdre;
 
     @Size(max = 30)

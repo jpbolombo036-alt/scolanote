@@ -22,7 +22,7 @@ public class CurriculumSubjectController {
     private final CurriculumSubjectService curriculumSubjectService;
 
     @PostMapping
-    @Operation(summary = "Ajouter une matière au programme", description = "Ajoute une matière avec coefficient à un programme")
+    @Operation(summary = "Ajouter une matière au programme", description = "Ajoute une matière avec coefficient à un programme. L'ordre est généré automatiquement serveur (max+1, scope programme+école) ; la valeur fournie est ignorée.")
     public ResponseEntity<CurriculumSubjectResponse> createCurriculumSubject(@Valid @RequestBody CurriculumSubjectRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(curriculumSubjectService.createCurriculumSubject(request));
     }
@@ -46,7 +46,7 @@ public class CurriculumSubjectController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier une matière de programme", description = "Modifie coefficient/ordre/obligatoire")
+    @Operation(summary = "Modifier une matière de programme", description = "Modifie coefficient/ordre/obligatoire. L'ordre est immuable (ignoré du request).")
     public ResponseEntity<CurriculumSubjectResponse> updateCurriculumSubject(@PathVariable Long id, @Valid @RequestBody CurriculumSubjectRequest request) {
         return ResponseEntity.ok(curriculumSubjectService.updateCurriculumSubject(id, request));
     }

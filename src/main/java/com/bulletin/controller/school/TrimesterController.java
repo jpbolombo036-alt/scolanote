@@ -25,7 +25,7 @@ public class TrimesterController {
     private final SecurityUtils securityUtils;
 
     @PostMapping
-    @Operation(summary = "Créer un trimestre", description = "Crée un trimestre (direction uniquement)")
+    @Operation(summary = "Créer un trimestre", description = "Crée un trimestre (direction uniquement). L'ordre est généré automatiquement serveur (max+1, scope année+école) ; la valeur fournie est ignorée.")
     public ResponseEntity<TrimesterResponse> createTrimester(@Valid @RequestBody TrimesterRequest request) {
         securityUtils.assertPermission("TRIMESTRE_GERER");
         return ResponseEntity.status(HttpStatus.CREATED).body(trimesterService.createTrimester(request));
@@ -56,7 +56,7 @@ public class TrimesterController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Modifier un trimestre", description = "Modifie un trimestre (direction uniquement)")
+    @Operation(summary = "Modifier un trimestre", description = "Modifie un trimestre (direction uniquement). L'ordre est immuable (ignoré du request).")
     public ResponseEntity<TrimesterResponse> updateTrimester(@PathVariable Long id, @Valid @RequestBody TrimesterRequest request) {
         securityUtils.assertPermission("TRIMESTRE_GERER");
         return ResponseEntity.ok(trimesterService.updateTrimester(id, request));

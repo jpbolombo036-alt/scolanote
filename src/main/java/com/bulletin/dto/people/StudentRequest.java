@@ -45,6 +45,15 @@ public class StudentRequest {
     @Size(max = 150)
     private String emailParent;
 
+    @Size(max = 100)
+    private String nomParent;
+
+    @Size(max = 100)
+    private String postnomParent;
+
+    @Size(max = 100)
+    private String prenomParent;
+
     @Size(max = 500)
     private String photo;
 

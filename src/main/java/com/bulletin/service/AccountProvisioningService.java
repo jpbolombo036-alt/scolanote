@@ -52,6 +52,30 @@ public class AccountProvisioningService {
      * @param recipientName le nom d'affichage pour l'e-mail de bienvenue
      * @return le User créé (ou existant si l'email était déjà utilisé)
      */
+    /**
+     * Surcharge enrichie : provisionne le compte en enregistrant aussi l'identité
+     * de la personne (nom / postnom / prénom / téléphone) — utilisée pour le PARENT.
+     */
+    @Transactional
+    public User provisionAccount(String email, String roleName, Long schoolId, String recipientName,
+                                 String nom, String postnom, String prenom, String telephone) {
+        User user = provisionAccount(email, roleName, schoolId, recipientName);
+        if (nom != null && !nom.isBlank()) {
+            user.setNom(nom);
+        }
+        if (postnom != null) {
+            user.setPostnom(postnom);
+        }
+        if (prenom != null) {
+            user.setPrenom(prenom);
+        }
+        if (telephone != null && !telephone.isBlank() && user.getTelephone() == null) {
+            user.setTelephone(telephone);
+        }
+        return userRepository.save(user);
+    }
+
+
     @Transactional
     public User provisionAccount(String email, String roleName, Long schoolId, String recipientName) {
         if (email == null || email.isBlank()) {

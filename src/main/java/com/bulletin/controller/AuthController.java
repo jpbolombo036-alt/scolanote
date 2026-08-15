@@ -252,6 +252,9 @@ public class AuthController {
                             .schoolId(existingUser.getSchoolId())
                             .permissions(permissions)
                             .passwordResetRequired(existingUser.isPasswordResetRequired())
+                            .nom(existingUser.getNom())
+                            .postnom(existingUser.getPostnom())
+                            .prenom(existingUser.getPrenom())
                             .build())
                     .build());
 
@@ -323,6 +326,9 @@ public class AuthController {
         currentUserResponse.setEnabled(user.isEnabled());
         currentUserResponse.setEmail(user.getEmail());
         currentUserResponse.setTelephone(user.getTelephone());
+        currentUserResponse.setNom(user.getNom());
+        currentUserResponse.setPostnom(user.getPostnom());
+        currentUserResponse.setPrenom(user.getPrenom());
         currentUserResponse.setRoles(roles);
         currentUserResponse.setPermissions(permissions);
         currentUserResponse.setSchoolId(user.getSchoolId());
@@ -360,6 +366,15 @@ public class AuthController {
 
         user.setEmail(request.getEmail());
         user.setTelephone(request.getTelephone());
+        if (request.getNom() != null) {
+            user.setNom(request.getNom());
+        }
+        if (request.getPostnom() != null) {
+            user.setPostnom(request.getPostnom());
+        }
+        if (request.getPrenom() != null) {
+            user.setPrenom(request.getPrenom());
+        }
         User saved = userRepository.save(user);
 
         List<String> roles = userRoleRepository.findRoleNamesByUserId(saved.getId());
@@ -371,6 +386,9 @@ public class AuthController {
         currentUserResponse.setEnabled(saved.isEnabled());
         currentUserResponse.setEmail(saved.getEmail());
         currentUserResponse.setTelephone(saved.getTelephone());
+        currentUserResponse.setNom(saved.getNom());
+        currentUserResponse.setPostnom(saved.getPostnom());
+        currentUserResponse.setPrenom(saved.getPrenom());
         currentUserResponse.setRoles(roles);
         currentUserResponse.setPermissions(permissions);
         currentUserResponse.setSchoolId(saved.getSchoolId());

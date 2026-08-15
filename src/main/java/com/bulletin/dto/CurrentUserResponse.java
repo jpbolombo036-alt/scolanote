@@ -19,5 +19,8 @@ public class CurrentUserResponse {
     private String telephone;
     private List<String> roles;
     private List<String> permissions;
+    private String nom;
+    private String postnom;
+    private String prenom;
     private Long schoolId;
 }

@@ -25,6 +25,12 @@ public class StudentResponse {
     private String adresse;
     private String telephoneParent;
     private String emailParent;
+
+    // Identité du parent / tuteur de l'élève
+    private String nomParent;
+    private String postnomParent;
+    private String prenomParent;
+
     private String photo;
     private String etat;
     private LocalDateTime createdAt;

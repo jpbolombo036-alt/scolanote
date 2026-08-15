@@ -78,7 +78,8 @@ public class StudentService {
 
             // 1. Créer le compte utilisateur du parent (rôle PARENT) + e-mail de bienvenue
             User parent = accountProvisioningService.provisionAccount(
-                    emailParent, "PARENT", student.getSchoolId(), "Parent de " + studentName.trim());
+                    emailParent, "PARENT", student.getSchoolId(), "Parent de " + studentName.trim(),
+        student.getNomParent(), student.getPostnomParent(), student.getPrenomParent(), student.getTelephoneParent());
 
             // 2. Créer le lien UserStudent (si pas déjà existant)
             boolean linkExists = userStudentRepository.existsByUser_IdAndStudent_Id(parent.getId(), student.getId());

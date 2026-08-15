@@ -15,4 +15,10 @@ public class ProfileUpdateRequest {
     private String email;
 
     private String telephone;
+
+    private String nom;
+
+    private String postnom;
+
+    private String prenom;
 }

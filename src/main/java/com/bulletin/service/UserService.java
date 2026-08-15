@@ -45,6 +45,9 @@ public class UserService {
 
         User user = User.builder()
                 .username(request.getUsername())
+                .nom(request.getNom())
+                .postnom(request.getPostnom())
+                .prenom(request.getPrenom())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .enabled(request.isEnabled())
                 .schoolId(securityUtils.getCurrentSchoolId())
@@ -112,6 +115,15 @@ public class UserService {
     public UserResponse updateUser(Long id, UserRequest request) {
         User user = findById(id);
         user.setUsername(request.getUsername());
+        if (request.getNom() != null) {
+            user.setNom(request.getNom());
+        }
+        if (request.getPostnom() != null) {
+            user.setPostnom(request.getPostnom());
+        }
+        if (request.getPrenom() != null) {
+            user.setPrenom(request.getPrenom());
+        }
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
@@ -205,6 +217,10 @@ public class UserService {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .schoolId(user.getSchoolId())
+                .nom(user.getNom())
+                .postnom(user.getPostnom())
+                .prenom(user.getPrenom())
+
                 .build();
     }
 }

@@ -21,4 +21,7 @@ public class UserResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Long schoolId;
+    private String nom;
+    private String postnom;
+    private String prenom;
 }

@@ -23,5 +23,14 @@ public class UserRequest {
 
     private boolean enabled;
 
+    @Size(max = 100)
+    private String nom;
+
+    @Size(max = 100)
+    private String postnom;
+
+    @Size(max = 100)
+    private String prenom;
+
     private java.util.List<String> roles;
 }

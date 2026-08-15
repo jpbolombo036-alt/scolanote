@@ -22,6 +22,15 @@ public class User extends BaseEntity {
 
     @Column(length = 20, unique = true)
     private String telephone;
+    @Column(length = 100)
+    private String nom;
+
+    @Column(length = 100)
+    private String postnom;
+
+    @Column(length = 100)
+    private String prenom;
+
 
     @Column(nullable = false)
     private String password;

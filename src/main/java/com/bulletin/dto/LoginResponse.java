@@ -46,6 +46,9 @@ public class LoginResponse {
         private List<String> roles;
         private Long schoolId;
         private List<String> permissions;
+        private String nom;
+        private String postnom;
+        private String prenom;
         private boolean passwordResetRequired;
     }
 }

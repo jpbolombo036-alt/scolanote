@@ -63,6 +63,13 @@ public class AssessmentController {
         return ResponseEntity.ok(assessmentService.updateAssessment(id, request));
     }
 
+    @PatchMapping("/{id}/publication")
+    @Operation(summary = "Publier/Dépublier", description = "Rend visibles (ou masque) les notes de cette évaluation pour les élèves et parents")
+    public ResponseEntity<AssessmentResponse> setPublication(@PathVariable Long id, @RequestBody java.util.Map<String, Boolean> body) {
+        boolean publie = Boolean.TRUE.equals(body.get("publie"));
+        return ResponseEntity.ok(assessmentService.setPublication(id, publie));
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer une évaluation", description = "Supprime une évaluation")
     public ResponseEntity<Void> deleteAssessment(@PathVariable Long id) {

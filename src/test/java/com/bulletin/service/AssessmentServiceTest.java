@@ -130,4 +130,27 @@ class AssessmentServiceTest {
         assertThrows(SecurityException.class, () -> assessmentService.createAssessment(request));
         verify(assessmentRepository, never()).save(any(Assessment.class));
     }
+
+    @Test
+    void setPublication_marksAssessmentAsPublished_andChecksOwnership() {
+        TeachingAssignment assignment = new TeachingAssignment();
+        assignment.setId(3L);
+        Assessment assessment = new Assessment();
+        assessment.setId(1L);
+        assessment.setSchoolId(SCHOOL_ID);
+        assessment.setAssignment(assignment);
+        assessment.setPeriod(newPeriod());
+        assessment.setAssessmentType(new AssessmentType());
+        when(assessmentRepository.findById(1L)).thenReturn(Optional.of(assessment));
+        when(assessmentRepository.save(any(Assessment.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(assessmentMapper.toResponse(assessment))
+                .thenReturn(AssessmentResponse.builder().id(1L).publie(true).build());
+
+        AssessmentResponse result = assessmentService.setPublication(1L, true);
+
+        assertTrue(result.isPublie());
+        assertTrue(assessment.isPublie());
+        verify(securityUtils).assertTeacherOwnsAssignment(assignment);
+        verify(assessmentRepository).save(assessment);
+    }
 }

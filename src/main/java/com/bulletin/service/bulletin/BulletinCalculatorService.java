@@ -28,6 +28,7 @@ public class BulletinCalculatorService {
     private final EnrollmentRepository enrollmentRepository;
     private final TrimesterRepository trimesterRepository;
     private final PeriodRepository periodRepository;
+    private final CurriculumRepository curriculumRepository;
 
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
 
@@ -53,13 +54,16 @@ public class BulletinCalculatorService {
         // Matières enseignées dans cette classe
         List<TeachingAssignment> assignments = teachingAssignmentRepository.findByClassroomId(classroom.getId());
 
+        // Coefficients des matières DU PROGRAMME EXACT de la classe (1 seule requête)
+        Map<Long, Integer> coefficientBySubject = loadClassroomCoefficientMap(classroom);
+
         List<SubjectResult> results = new ArrayList<>();
 
         for (TeachingAssignment assignment : assignments) {
             Subject subject = assignment.getSubject();
 
             // Coefficient de la matière dans le programme de la classe
-            Integer subjectCoefficient = resolveSubjectCoefficient(classroom, subject);
+            Integer subjectCoefficient = coefficientOrDefault(coefficientBySubject, subject);
 
             // Évaluations de cette matière pour ce trimestre
             List<Assessment> assessments = assessmentRepository
@@ -149,19 +153,8 @@ public class BulletinCalculatorService {
         // 3. Toutes les notes de la classe pour la période (1 requête)
         List<Grade> grades = gradeRepository.findByClassroomIdAndPeriodId(classroomId, periodId);
 
-        // 4. Coefficients des matières (1 requête)
-        List<Long> subjectIds = assignments.stream()
-                .map(a -> a.getSubject().getId())
-                .distinct()
-                .toList();
-        Map<Long, Integer> coefficientBySubject = subjectIds.isEmpty()
-                ? Map.of()
-                : curriculumSubjectRepository.findCoefficientsBySubjectIds(subjectIds).stream()
-                        .filter(cs -> cs.getCoefficient() != null)
-                        .collect(Collectors.toMap(
-                                cs -> cs.getSubject().getId(),
-                                CurriculumSubject::getCoefficient,
-                                (a, b) -> a));
+        // 4. Coefficients des matières DU PROGRAMME EXACT de la classe (1 requête)
+        Map<Long, Integer> coefficientBySubject = loadClassroomCoefficientMap(classroom);
 
         // --- Indexation en mémoire ---
         // assessmentId -> assessment
@@ -254,17 +247,51 @@ public class BulletinCalculatorService {
                 .orElse(BigDecimal.ZERO);
     }
 
-    private Integer resolveSubjectCoefficient(Classroom classroom, Subject subject) {
-        if (classroom.getReportTemplate() == null && classroom.getLevel() == null) {
-            return 1;
+    /**
+     * Charge les coefficients des matières DU PROGRAMME EXACT de la classe
+     * (level + section + option). Auparavant, le premier CurriculumSubject
+     * trouvé pour la matière était utilisé, quel que soit le programme —
+     * source de coefficients faux et non déterministes
+     * (ex : Maths coef 6 en Scientifique vs coef 2 en Pédagogie).
+     *
+     * @return map subjectId -> coefficient (vide si la classe n'a pas de programme)
+     */
+    private Map<Long, Integer> loadClassroomCoefficientMap(Classroom classroom) {
+        Curriculum curriculum = resolveClassroomCurriculum(classroom);
+        if (curriculum == null) {
+            return Map.of();
         }
-        // Recherche du coefficient via le programme lié à la classe (level/section/option)
-        List<CurriculumSubject> curriculumSubjects = curriculumSubjectRepository.findBySubjectId(subject.getId());
-        return curriculumSubjects.stream()
-                .filter(cs -> cs.getCoefficient() != null)
-                .map(CurriculumSubject::getCoefficient)
+        return curriculumSubjectRepository.findByCurriculumId(curriculum.getId()).stream()
+                .filter(cs -> cs.getSubject() != null && cs.getCoefficient() != null)
+                .collect(Collectors.toMap(
+                        cs -> cs.getSubject().getId(),
+                        CurriculumSubject::getCoefficient,
+                        (a, b) -> a));
+    }
+
+    /** Coefficient de la matière dans le programme de la classe ; 1 par défaut. */
+    private Integer coefficientOrDefault(Map<Long, Integer> coefficientBySubject, Subject subject) {
+        return coefficientBySubject.getOrDefault(subject.getId(), 1);
+    }
+
+    /**
+     * Curriculum exact de la classe : même level + section + option
+     * (les sections/options nulles des deux côtés sont acceptées).
+     */
+    private Curriculum resolveClassroomCurriculum(Classroom classroom) {
+        if (classroom.getLevel() == null) {
+            return null;
+        }
+        Long levelId = classroom.getLevel().getId();
+        Long sectionId = classroom.getSection() != null ? classroom.getSection().getId() : null;
+        Long optionId = classroom.getOption() != null ? classroom.getOption().getId() : null;
+        return curriculumRepository.findByLevelId(levelId).stream()
+                .filter(c -> java.util.Objects.equals(
+                        c.getSection() != null ? c.getSection().getId() : null, sectionId))
+                .filter(c -> java.util.Objects.equals(
+                        c.getOption() != null ? c.getOption().getId() : null, optionId))
                 .findFirst()
-                .orElse(1);
+                .orElse(null);
     }
 
     private BigDecimal resolveAssessmentCoefficient(Assessment assessment) {
@@ -314,11 +341,13 @@ public class BulletinCalculatorService {
         // Matières enseignées dans cette classe
         List<TeachingAssignment> assignments = teachingAssignmentRepository.findByClassroomId(classroom.getId());
 
+        Map<Long, Integer> coefficientBySubject = loadClassroomCoefficientMap(classroom);
+
         List<SubjectResult> annualResults = new ArrayList<>();
 
         for (TeachingAssignment assignment : assignments) {
             Subject subject = assignment.getSubject();
-            Integer subjectCoefficient = resolveSubjectCoefficient(classroom, subject);
+            Integer subjectCoefficient = coefficientOrDefault(coefficientBySubject, subject);
 
             BigDecimal annualWeightedSum = BigDecimal.ZERO;
             BigDecimal annualCoeffSum = BigDecimal.ZERO;
@@ -379,11 +408,12 @@ public class BulletinCalculatorService {
                 .toList();
 
         List<TeachingAssignment> assignments = teachingAssignmentRepository.findByClassroomId(classroom.getId());
+        Map<Long, Integer> coefficientBySubject = loadClassroomCoefficientMap(classroom);
         List<SubjectResult> results = new ArrayList<>();
 
         for (TeachingAssignment assignment : assignments) {
             Subject subject = assignment.getSubject();
-            Integer subjectCoefficient = resolveSubjectCoefficient(classroom, subject);
+            Integer subjectCoefficient = coefficientOrDefault(coefficientBySubject, subject);
 
             BigDecimal weightedSum = BigDecimal.ZERO;
             BigDecimal coeffSum = BigDecimal.ZERO;
@@ -443,11 +473,12 @@ public class BulletinCalculatorService {
                 .toList();
 
         List<TeachingAssignment> assignments = teachingAssignmentRepository.findByClassroomId(classroom.getId());
+        Map<Long, Integer> coefficientBySubject = loadClassroomCoefficientMap(classroom);
         List<SubjectResult> results = new ArrayList<>();
 
         for (TeachingAssignment assignment : assignments) {
             Subject subject = assignment.getSubject();
-            Integer subjectCoefficient = resolveSubjectCoefficient(classroom, subject);
+            Integer subjectCoefficient = coefficientOrDefault(coefficientBySubject, subject);
 
             BigDecimal weightedSum = BigDecimal.ZERO;
             BigDecimal coeffSum = BigDecimal.ZERO;

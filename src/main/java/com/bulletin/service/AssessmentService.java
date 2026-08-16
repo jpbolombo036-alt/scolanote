@@ -117,6 +117,21 @@ public class AssessmentService {
         return toResponse(saved);
     }
 
+    /**
+     * Publie ou dépublie une évaluation : rend ses notes visibles (ou les masque)
+     * pour les comptes « famille » (parents/élèves).
+     * Réservé au professeur propriétaire de l'affectation ou à la direction.
+     */
+    @Transactional
+    public AssessmentResponse setPublication(Long id, boolean publie) {
+        Assessment assessment = findById(id);
+        securityUtils.assertTeacherOwnsAssignment(assessment.getAssignment());
+        assessment.setPublie(publie);
+        Assessment saved = assessmentRepository.save(assessment);
+        log.info("Évaluation {} {}", id, publie ? "publiée" : "dépubliée");
+        return toResponse(saved);
+    }
+
     @Transactional
     public void deleteAssessment(Long id) {
         Assessment assessment = findById(id);

@@ -7,6 +7,7 @@ import com.bulletin.entity.Assessment;
 import com.bulletin.entity.Enrollment;
 import com.bulletin.entity.Grade;
 import com.bulletin.entity.Student;
+import com.bulletin.entity.UserStudent;
 import com.bulletin.exception.DuplicateResourceException;
 import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.GradeMapper;
@@ -14,6 +15,7 @@ import com.bulletin.repository.AssessmentRepository;
 import com.bulletin.repository.EnrollmentRepository;
 import com.bulletin.repository.GradeRepository;
 import com.bulletin.repository.StudentRepository;
+import com.bulletin.repository.UserStudentRepository;
 import com.bulletin.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +44,7 @@ public class GradeService {
     private final SecurityUtils securityUtils;
     private final PeriodClosureService periodClosureService;
     private final EnrollmentRepository enrollmentRepository;
+    private final UserStudentRepository userStudentRepository;
 
     @Transactional
     public GradeResponse createGrade(GradeRequest request) {
@@ -63,11 +66,16 @@ public class GradeService {
     public GradeResponse getGrade(Long id) {
         Grade grade = findById(id);
         securityUtils.assertSchoolAccess(grade.getSchoolId());
+        List<Long> restricted = restrictedStudentIdsOrNull();
+        if (restricted != null) {
+            assertLinkedAccess(grade, restricted);
+        }
         return toResponse(grade);
     }
 
     @Transactional(readOnly = true)
     public Page<GradeResponse> getAccessibleGrades(Pageable pageable) {
+        assertStaffAccess();
         Page<Grade> page = securityUtils.isSuperAdmin()
                 ? gradeRepository.findAllComplete(pageable)
                 : gradeRepository.findCompleteBySchoolId(securityUtils.requireSchoolId(), pageable);
@@ -82,6 +90,7 @@ public class GradeService {
 
     @Transactional(readOnly = true)
     public List<GradeResponse> getAccessibleGrades() {
+        assertStaffAccess();
         List<Grade> grades = securityUtils.isSuperAdmin()
                 ? gradeRepository.findAllComplete()
                 : gradeRepository.findCompleteBySchoolId(securityUtils.requireSchoolId());
@@ -93,6 +102,7 @@ public class GradeService {
 
     @Transactional(readOnly = true)
     public List<GradeResponse> getByAssessment(Long assessmentId) {
+        assertStaffAccess();
         Assessment assessment = findAssessment(assessmentId);
         List<Grade> grades = securityUtils.isSuperAdmin()
                 ? gradeRepository.findCompleteByAssessmentId(assessmentId)
@@ -106,26 +116,49 @@ public class GradeService {
     @Transactional(readOnly = true)
     public List<GradeResponse> getByStudent(Long studentId) {
         Student student = findStudent(studentId);
-        List<Grade> grades = securityUtils.isSuperAdmin()
-                ? gradeRepository.findCompleteByStudentId(studentId)
-                : gradeRepository.findByStudentIdAndSchoolId(studentId, student.getSchoolId());
+        List<Long> restricted = restrictedStudentIdsOrNull();
+        List<Grade> grades;
+        if (restricted != null) {
+            // Compte « famille » : uniquement SES élèves liés, évaluations publiées
+            if (!restricted.contains(studentId)) {
+                throw new SecurityException("Accès refusé : cet élève n'est pas lié à votre compte");
+            }
+            grades = gradeRepository.findPublishedByStudentIds(List.of(studentId));
+        } else {
+            grades = securityUtils.isSuperAdmin()
+                    ? gradeRepository.findCompleteByStudentId(studentId)
+                    : gradeRepository.findByStudentIdAndSchoolId(studentId, student.getSchoolId());
+        }
         return grades.stream()
                 .map(this::toResponseSafe)
                 .flatMap(Optional::stream)
                 .toList();
     }
 
+    /**
+     * Modifie une note. L'identité d'une note = (évaluation, élève) : elle ne
+     * change JAMAIS en modification — sinon l'audit serait faussé (la note
+     * garderait son ID et sa date de création en appartenant à un autre élève).
+     * Pour « déplacer » une note : la supprimer puis la recréer (l'élève
+     * réapparaît alors dans la liste des « reste à noter »).
+     */
     @Transactional
     public GradeResponse updateGrade(Long id, GradeRequest request) {
         Grade grade = findById(id);
         securityUtils.assertSchoolAccess(grade.getSchoolId());
-        gradeMapper.updateEntity(request, grade);
-        Assessment assessment = findAssessment(request.getAssessmentId());
+        if (grade.getAssessment() == null || grade.getStudent() == null) {
+            throw new ResourceNotFoundException("Note incomplète avec l'ID: " + id);
+        }
+        if (!grade.getAssessment().getId().equals(request.getAssessmentId())
+                || !grade.getStudent().getId().equals(request.getStudentId())) {
+            throw new IllegalArgumentException(
+                    "Impossible de changer l'évaluation ou l'élève d'une note existante. "
+                            + "Supprimez la note puis recréez-la.");
+        }
+        Assessment assessment = grade.getAssessment();
         periodClosureService.assertPeriodeOuverte(assessment.getPeriod().getId());
         assertCanModifyGrades(assessment.getAssignment(), "NOTE_MODIFIER");
-        grade.setAssessment(assessment);
-        grade.setStudent(findStudent(request.getStudentId()));
-        assertNoDuplicate(request.getAssessmentId(), request.getStudentId(), id);
+        gradeMapper.updateEntity(request, grade);
         assertNoteCoherence(request, assessment);
         Grade saved = gradeRepository.save(grade);
         log.info("Note mise à jour: {}", saved.getId());
@@ -226,6 +259,75 @@ public class GradeService {
                         .numeroOrdre(e.getNumeroOrdre())
                         .build())
                 .toList();
+    }
+
+    /**
+     * Notes visibles pour le compte « famille » connecté (parent/élève) :
+     * celles de SES élèves liés (user_students), limitées aux évaluations publiées.
+     */
+    @Transactional(readOnly = true)
+    public List<GradeResponse> getMyGrades() {
+        Long userId = securityUtils.getCurrentUserId();
+        if (userId == null) {
+            throw new SecurityException("Authentification requise");
+        }
+        List<Long> studentIds = userStudentRepository.findByUserId(userId).stream()
+                .filter(us -> us.getStudent() != null)
+                .map(us -> us.getStudent().getId())
+                .toList();
+        if (studentIds.isEmpty()) {
+            return List.of();
+        }
+        return gradeRepository.findPublishedByStudentIds(studentIds).stream()
+                .map(this::toResponseSafe)
+                .flatMap(Optional::stream)
+                .toList();
+    }
+
+    /**
+     * Détermine si l'utilisateur connecté est un compte « famille » (parent/élève) :
+     * lié à au moins un élève via user_students SANS faire partie du personnel
+     * (direction, enseignant ou titulaire d'une permission NOTE_*).
+     *
+     * @return les IDs des élèves liés si accès restreint, null si accès personnel standard
+     */
+    private List<Long> restrictedStudentIdsOrNull() {
+        if (securityUtils.isDirection() || securityUtils.isEnseignant()
+                || securityUtils.hasPermission("NOTE_SAISIR") || securityUtils.hasPermission("NOTE_MODIFIER")) {
+            return null; // personnel : accès standard filtré par école
+        }
+        Long userId = securityUtils.getCurrentUserId();
+        if (userId == null) {
+            return null;
+        }
+        List<Long> linkedIds = userStudentRepository.findByUserId(userId).stream()
+                .filter(us -> us.getStudent() != null)
+                .map(us -> us.getStudent().getId())
+                .toList();
+        return linkedIds.isEmpty() ? null : linkedIds;
+    }
+
+    /** Les listes globales de notes sont réservées au personnel de l'école. */
+    private void assertStaffAccess() {
+        if (restrictedStudentIdsOrNull() != null) {
+            throw new SecurityException(
+                    "Accès réservé au personnel de l'école. Utilisez /api/notes/mes-notes.");
+        }
+    }
+
+    /**
+     * Contrôle d'accès pour un compte « famille » : la note doit appartenir à un
+     * élève lié ET relever d'une évaluation publiée (404 pour ne pas révéler
+     * l'existence d'une note non publiée).
+     */
+    private void assertLinkedAccess(Grade grade, List<Long> linkedStudentIds) {
+        Long studentId = grade.getStudent() != null ? grade.getStudent().getId() : null;
+        if (studentId == null || !linkedStudentIds.contains(studentId)) {
+            throw new SecurityException("Accès refusé : cet élève n'est pas lié à votre compte");
+        }
+        if (grade.getAssessment() == null || !grade.getAssessment().isPublie()) {
+            throw new ResourceNotFoundException("Note non trouvée avec l'ID: " + grade.getId());
+        }
     }
 
     /**

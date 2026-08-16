@@ -93,6 +93,19 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
             @Param("periodId") Long periodId);
 
     /**
+     * Notes des élèves donnés, limitées aux évaluations PUBLIÉES.
+     * Utilisé pour les comptes « famille » (parents/élèves) qui ne doivent
+     * voir que les notes rendues publiques par le professeur.
+     */
+    @Query("""
+            SELECT g FROM Grade g
+            WHERE g.student.id IN :studentIds
+              AND g.assessment.publie = true
+            ORDER BY g.id DESC
+            """)
+    List<Grade> findPublishedByStudentIds(@Param("studentIds") List<Long> studentIds);
+
+    /**
      * Paires distinctes (assessment_id, student_id) des notes d'une période.
      * Utilisé par la validation de clôture : comptage exact, insensible aux
      * éventuels doublons, sans charger les entités complètes en mémoire.

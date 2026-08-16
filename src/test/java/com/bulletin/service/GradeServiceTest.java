@@ -10,12 +10,15 @@ import com.bulletin.entity.Grade;
 import com.bulletin.entity.Period;
 import com.bulletin.entity.Student;
 import com.bulletin.entity.TeachingAssignment;
+import com.bulletin.entity.UserStudent;
 import com.bulletin.exception.DuplicateResourceException;
+import com.bulletin.exception.ResourceNotFoundException;
 import com.bulletin.mapper.GradeMapper;
 import com.bulletin.repository.AssessmentRepository;
 import com.bulletin.repository.EnrollmentRepository;
 import com.bulletin.repository.GradeRepository;
 import com.bulletin.repository.StudentRepository;
+import com.bulletin.repository.UserStudentRepository;
 import com.bulletin.security.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +32,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -56,6 +60,8 @@ class GradeServiceTest {
     PeriodClosureService periodClosureService;
     @Mock
     EnrollmentRepository enrollmentRepository;
+    @Mock
+    UserStudentRepository userStudentRepository;
 
     GradeService gradeService;
 
@@ -67,7 +73,7 @@ class GradeServiceTest {
     @BeforeEach
     void setUp() {
         gradeService = new GradeService(gradeRepository, assessmentRepository, studentRepository,
-                gradeMapper, securityUtils, periodClosureService, enrollmentRepository);
+                gradeMapper, securityUtils, periodClosureService, enrollmentRepository, userStudentRepository);
     }
 
     private Assessment newAssessment() {
@@ -139,50 +145,72 @@ class GradeServiceTest {
     }
 
     @Test
-    void updateGrade_throwsDuplicate_whenPairCollidesWithAnotherGrade() {
+    void updateGrade_throwsBadRequest_whenAssessmentChanged() {
+        // L'identité (évaluation, élève) d'une note ne change jamais en modification
         Grade grade = new Grade();
         grade.setId(50L);
         grade.setSchoolId(SCHOOL_ID);
+        grade.setAssessment(newAssessment());
+        grade.setStudent(newStudent(STUDENT_ID));
         when(gradeRepository.findById(50L)).thenReturn(Optional.of(grade));
 
-        when(assessmentRepository.findById(ASSESSMENT_ID)).thenReturn(Optional.of(newAssessment()));
-        when(securityUtils.hasPermission("NOTE_MODIFIER")).thenReturn(true);
-        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(newStudent(STUDENT_ID)));
+        GradeRequest request = GradeRequest.builder()
+                .assessmentId(999L) // ← évaluation différente de celle de la note (100)
+                .studentId(STUDENT_ID)
+                .note(new BigDecimal("14"))
+                .build();
 
-        // Une AUTRE note (id=999) occupe déjà le couple (évaluation, élève)
-        Grade other = new Grade();
-        other.setId(999L);
-        when(gradeRepository.findByAssessmentIdAndStudentId(ASSESSMENT_ID, STUDENT_ID))
-                .thenReturn(List.of(other));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> gradeService.updateGrade(50L, request));
 
-        assertThrows(DuplicateResourceException.class,
-                () -> gradeService.updateGrade(50L, newRequest()));
+        assertTrue(ex.getMessage().contains("Impossible de changer"));
         verify(gradeRepository, never()).save(any(Grade.class));
     }
 
     @Test
-    void updateGrade_saves_whenOnlyExistingGradeIsItself() {
+    void updateGrade_throwsBadRequest_whenStudentChanged() {
         Grade grade = new Grade();
         grade.setId(50L);
         grade.setSchoolId(SCHOOL_ID);
+        grade.setAssessment(newAssessment());
+        grade.setStudent(newStudent(STUDENT_ID));
         when(gradeRepository.findById(50L)).thenReturn(Optional.of(grade));
 
-        when(assessmentRepository.findById(ASSESSMENT_ID)).thenReturn(Optional.of(newAssessment()));
+        GradeRequest request = GradeRequest.builder()
+                .assessmentId(ASSESSMENT_ID)
+                .studentId(999L) // ← élève différent de celui de la note (1)
+                .note(new BigDecimal("14"))
+                .build();
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> gradeService.updateGrade(50L, request));
+
+        assertTrue(ex.getMessage().contains("Impossible de changer"));
+        verify(gradeRepository, never()).save(any(Grade.class));
+    }
+
+    @Test
+    void updateGrade_saves_whenOnlyValueChanges() {
+        Grade grade = new Grade();
+        grade.setId(50L);
+        grade.setSchoolId(SCHOOL_ID);
+        grade.setAssessment(newAssessment());
+        grade.setStudent(newStudent(STUDENT_ID));
+        when(gradeRepository.findById(50L)).thenReturn(Optional.of(grade));
         when(securityUtils.hasPermission("NOTE_MODIFIER")).thenReturn(true);
-        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(newStudent(STUDENT_ID)));
-
-        // La seule note trouvée est la note courante → pas de conflit
-        when(gradeRepository.findByAssessmentIdAndStudentId(ASSESSMENT_ID, STUDENT_ID))
-                .thenReturn(List.of(grade));
-
         when(gradeRepository.save(any(Grade.class))).thenAnswer(inv -> inv.getArgument(0));
         when(gradeMapper.toResponse(grade))
                 .thenReturn(GradeResponse.builder().id(50L).build());
 
+        // Même couple (évaluation 100, élève 1) → modification autorisée
         GradeResponse result = gradeService.updateGrade(50L, newRequest());
 
         assertEquals(50L, result.getId());
         verify(gradeRepository).save(grade);
+        // L'évaluation et l'élève ne sont plus re-chargés depuis le request :
+        // on utilise ceux de la note existante
+        verify(assessmentRepository, never()).findById(any());
+        verify(studentRepository, never()).findById(any());
     }
 
     @Test
@@ -273,6 +301,105 @@ class GradeServiceTest {
         verify(periodClosureService).assertPeriodeOuverte(PERIOD_ID);
         assertNotNull(grade.getDeletedAt());
         verify(gradeRepository).save(grade);
+    }
+
+    @Test
+    void getByStudent_asLinkedUser_throws403_whenStudentNotLinked() {
+        // Parent lié aux élèves 2 et 3 ; il demande les notes de l'élève 1
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(newStudent(STUDENT_ID)));
+        stubLinkedUser(2L, 3L);
+
+        SecurityException ex = assertThrows(SecurityException.class,
+                () -> gradeService.getByStudent(STUDENT_ID));
+
+        assertTrue(ex.getMessage().contains("n'est pas lié"));
+        verify(gradeRepository, never()).findPublishedByStudentIds(any());
+    }
+
+    @Test
+    void getByStudent_asLinkedUser_returnsOnlyPublishedGrades() {
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(newStudent(STUDENT_ID)));
+        stubLinkedUser(STUDENT_ID, 2L);
+
+        Grade published = new Grade();
+        published.setId(11L);
+        published.setStudent(newStudent(STUDENT_ID));
+        Assessment pubAssessment = newAssessment();
+        pubAssessment.setPublie(true);
+        published.setAssessment(pubAssessment);
+        when(gradeRepository.findPublishedByStudentIds(List.of(STUDENT_ID)))
+                .thenReturn(List.of(published));
+        when(gradeMapper.toResponse(published)).thenReturn(GradeResponse.builder().id(11L).build());
+
+        List<GradeResponse> result = gradeService.getByStudent(STUDENT_ID);
+
+        assertEquals(1, result.size());
+        assertEquals(11L, result.get(0).getId());
+        verify(gradeRepository).findPublishedByStudentIds(List.of(STUDENT_ID));
+        verify(gradeRepository, never()).findByStudentIdAndSchoolId(any(), any());
+    }
+
+    @Test
+    void getAccessibleGrades_throws403_forLinkedUser() {
+        stubLinkedUser(STUDENT_ID);
+
+        SecurityException ex = assertThrows(SecurityException.class,
+                () -> gradeService.getAccessibleGrades());
+
+        assertTrue(ex.getMessage().contains("mes-notes"));
+        verify(gradeRepository, never()).findCompleteBySchoolId(any(Long.class));
+    }
+
+    @Test
+    void getMyGrades_returnsOnlyPublishedGradesOfLinkedStudents() {
+        when(securityUtils.getCurrentUserId()).thenReturn(42L);
+        UserStudent link = new UserStudent();
+        link.setStudent(newStudent(STUDENT_ID));
+        when(userStudentRepository.findByUserId(42L)).thenReturn(List.of(link));
+
+        Grade published = new Grade();
+        published.setId(11L);
+        published.setStudent(newStudent(STUDENT_ID));
+        published.setAssessment(newAssessment());
+        when(gradeRepository.findPublishedByStudentIds(List.of(STUDENT_ID)))
+                .thenReturn(List.of(published));
+        when(gradeMapper.toResponse(published)).thenReturn(GradeResponse.builder().id(11L).build());
+
+        List<GradeResponse> result = gradeService.getMyGrades();
+
+        assertEquals(1, result.size());
+        assertEquals(11L, result.get(0).getId());
+        verify(gradeRepository).findPublishedByStudentIds(List.of(STUDENT_ID));
+    }
+
+    @Test
+    void getGrade_asLinkedUser_throws404_whenAssessmentNotPublished() {
+        Grade grade = new Grade();
+        grade.setId(50L);
+        grade.setSchoolId(SCHOOL_ID);
+        grade.setStudent(newStudent(STUDENT_ID));
+        Assessment unpublished = newAssessment(); // publie = false par défaut
+        grade.setAssessment(unpublished);
+        when(gradeRepository.findById(50L)).thenReturn(Optional.of(grade));
+        stubLinkedUser(STUDENT_ID);
+
+        assertThrows(ResourceNotFoundException.class, () -> gradeService.getGrade(50L));
+    }
+
+    /** Simule un compte « famille » (parent/élève) lié aux élèves donnés. */
+    private void stubLinkedUser(Long... studentIds) {
+        when(securityUtils.isDirection()).thenReturn(false);
+        when(securityUtils.isEnseignant()).thenReturn(false);
+        when(securityUtils.hasPermission(anyString())).thenReturn(false);
+        when(securityUtils.getCurrentUserId()).thenReturn(42L);
+        List<UserStudent> links = java.util.Arrays.stream(studentIds)
+                .map(id -> {
+                    UserStudent us = new UserStudent();
+                    us.setStudent(newStudent(id));
+                    return us;
+                })
+                .toList();
+        when(userStudentRepository.findByUserId(42L)).thenReturn(links);
     }
 
     /** Stubs communs du chemin nominal de création (évaluation + permission + élève). */

@@ -60,6 +60,12 @@ public class GradeController {
         return ResponseEntity.ok(gradeService.getByStudent(eleveId));
     }
 
+    @GetMapping("/mes-notes")
+    @Operation(summary = "Mes notes", description = "Notes publiées des élèves liés au compte connecté (parent/élève)")
+    public ResponseEntity<List<GradeResponse>> getMyGrades() {
+        return ResponseEntity.ok(gradeService.getMyGrades());
+    }
+
     @GetMapping("/evaluation/{evaluationId}/manquants")
     @Operation(summary = "Élèves non notés", description = "Retourne les élèves de la classe qui n'ont pas encore de note pour cette évaluation (triés par numéro d'ordre)")
     public ResponseEntity<List<MissingGradeStudentResponse>> getStudentsWithoutGrade(@PathVariable Long evaluationId) {

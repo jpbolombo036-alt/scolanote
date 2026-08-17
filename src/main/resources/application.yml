@@ -63,6 +63,9 @@ app:
     url: ${FRONTEND_URL:http://localhost:3000}
 
   bulletin:
+    # Barème de référence par défaut quand la matière n'en configure pas
+    # (CurriculumSubject.noteMaxReference). Jamais déduit des notes enregistrées.
+    default-note-max: ${BULLETIN_DEFAULT_NOTE_MAX:20}
     # Seuils configurables de mention et decision (en pourcentage)
     mention:
       excellent: 85
@@ -80,3 +83,4 @@ app:
 logging:
   level:
     com.bulletin: ${LOG_LEVEL:INFO}
+    org.flywaydb: ${FLYWAY_LOG_LEVEL:DEBUG}
